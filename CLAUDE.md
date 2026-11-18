@@ -45,6 +45,9 @@ Non-negotiable invariants from the brief, in case a change looks like it violate
 | `frontend/` | TanStack Start app — the lesson view. See `frontend/CLAUDE.md`. |
 | `backend/` | Python/FastAPI tutor service. See `backend/CLAUDE.md`. |
 | `evals/` | Model comparison harness, outside the application: reads `backend/`, never changes it, nothing imports it. See `evals/README.md` and `documentation/model-evals.md`. |
+| `Dockerfile`, `docker/`, `docker-compose.yml` | The single self-hosting image: Caddy on `:8080` routes `/api` to the backend and the rest to the web app (`docker/Caddyfile`), `docker/entrypoint.sh` migrates (with a backup) and drops privileges. See `documentation/docker.md`. |
+| `.github/workflows/image.yml` | CI: tests, image build, `docker/smoke.sh`, then pushes `ghcr.io/eschnou/celestin` from `main` and `v*` tags. |
+| `video/` | Remotion presentation video that renders the real frontend components (`@` aliases `../frontend/src`). See `video/README.md`. |
 
 Each side has its own `CLAUDE.md` with the commands and conventions that only apply there. Read the one for the directory you are working in.
 
@@ -61,6 +64,14 @@ Configuration comes from `.env` in `backend/` or at the repository root; both ar
 `SESSION_SECRET` is required unless `SECRETS_DIR` generates one; `OPENAI_API_KEY` is optional (an administrator can choose the provider and store its key encrypted in the settings screen, specs 013 and 014; `OPENAI_BASE_URL` and the model variables point at another provider); `COOKIE_SECURE=false` (or `auto`) on plain `http://localhost`. A fresh instance is waiting for its first administrator and leads to `/setup`.
 Full setup, checks and troubleshooting: `documentation/running-locally.md`. The same thing as one Docker image: `documentation/docker.md`.
 
+What CI runs, and so what must pass before pushing (single-test and probe commands are in each side's `CLAUDE.md`):
+
+```sh
+cd backend  && uv sync --frozen && uv run pytest -q
+cd frontend && npm ci && npm run typecheck && npm run lint && npm test   # npm test also checks every messages/*.json has the same keys
+docker build -t celestin:dev . && docker/smoke.sh celestin:dev           # the image: setup, restart, migration with backup; no provider call
+```
+
 ## Git
 
 Never rewrite published history: no force push, rebase, amend or squash of commits that are already pushed. Keep the branch you push in a working state.
@@ -73,8 +84,8 @@ The `./specs` folder contains steering documents for the project:
 - `./specs/index.md` - Index of all feature specs
 
 ### Spec-Driven Development
-Feature specs are written and executed with the `sdd` plugin (marketplace `eschnou/claude-plugins`,
-install with `/plugin marketplace add eschnou/claude-plugins` then `/plugin install sdd@eschnou-claude-plugins`).
+Feature specs are written and executed with the `sdd` plugin (marketplace `eschnou-plugins` from the repository `eschnou/claude-plugins`,
+install with `/plugin marketplace add eschnou/claude-plugins` then `/plugin install sdd@eschnou-plugins`).
 **Always go through these commands**; never freehand a `requirements.md`, `design.md` or `tasks.md`,
 and never run a later step before the user has reviewed the previous one.
 
