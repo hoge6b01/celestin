@@ -1,0 +1,41 @@
+# Lernpfad für das Kapitel gleichförmige geradlinige Bewegung: eine deutschsprachige Fixture für
+# Physik (spec 021) für die Diagrammproben, von Hand geschrieben aus
+# tests/fixtures/material/physik_gleichfoermig_de.txt. Verweise wie „§4.3“ oder „6.2.2“ zeigen
+# auf das benachbarte Pack. Aufgabe 6.1.2 steht in § 7 (falsche Lösung): Sie wird nicht
+# angeboten.
+
+id: gleichfoermige-bewegung
+title: Gleichförmige geradlinige Bewegung
+
+sections:
+  - id: bewegung
+    kind: teach
+    title: Bezugssystem, Bahn und Durchschnittsgeschwindigkeit
+    goal: Eine Bewegung in Bezug auf ein Bezugssystem beschreiben und eine Durchschnittsgeschwindigkeit berechnen.
+    pack: ["§4.1", "§4.2"]
+    beats:
+      - Die Person im Bus, in Ruhe in Bezug auf den Bus und in Bewegung in Bezug auf den Gehweg.
+      - Die Definition der Bahn, dann der geradlinigen Bewegung.
+      - Die Durchschnittsgeschwindigkeit, ihre Formel und die Umrechnung 72 km/h = 20 m/s.
+      - Kontrollfrage zum Umrechnen von km/h in m/s.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: gleichfoermig
+    kind: teach
+    title: Gleichförmige Bewegung, ihre Gleichung und ihre Diagramme
+    goal: Eine gleichförmige Bewegung erkennen, ihre Gleichung aufstellen und die Geschwindigkeit aus dem x(t)-Diagramm ablesen.
+    pack: ["§4.3"]
+    beats:
+      - Die Definition der gleichförmigen geradlinigen Bewegung.
+      - Der Versuch mit dem Wagen, seine Messwerttabelle und sein x(t)-Diagramm.
+      - Die Bewegungsgleichung, dann das x(t)- und das v(t)-Diagramm einer gleichförmigen Bewegung.
+      - Kontrollfrage dazu, was die Steigung des x(t)-Diagramms darstellt.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: ueben
+    kind: practise
+    title: Aufgaben zur gleichförmigen Bewegung
+    goal: Eine Geschwindigkeit und einen Ort berechnen und eine Geschwindigkeit aus einem Diagramm ablesen.
+    exercises: ["6.1.1", "6.2.1", "6.2.2"]
+    count: 2
+    done_when: Zwei Aufgaben gelöst, darunter eine aus einem Diagramm abgelesene Geschwindigkeit.

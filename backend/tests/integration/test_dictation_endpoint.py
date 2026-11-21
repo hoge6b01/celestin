@@ -39,6 +39,14 @@ async def test_the_course_language_is_passed_on(make_dictation_client) -> None:
     assert (transcriber.calls[0]["language"], transcriber.calls[0]["filename"]) == ("en", "dictation.mp4")
 
 
+async def test_a_german_course_passes_german(make_dictation_client) -> None:
+    """Spec 021 R8.1: the hint is `de` for a German course (the browser sends the course's language)."""
+    transcriber = FakeTranscriber("Hallo")
+    async with make_dictation_client(transcriber) as client:
+        r = await client.post("/api/dictation", files=recording(), data={"language": "de"})
+    assert r.status_code == 200 and transcriber.calls[0]["language"] == "de"
+
+
 async def test_a_recording_without_a_language_is_transcribed_without_a_hint(make_dictation_client) -> None:
     """A language course mixes two languages: the browser then sends no hint at all."""
     transcriber = FakeTranscriber("Ik heb een boek.")
@@ -67,7 +75,7 @@ async def test_what_is_not_audio_is_refused(make_dictation_client, files) -> Non
 
 async def test_a_language_the_course_cannot_have_is_refused(make_dictation_client) -> None:
     async with make_dictation_client(FakeTranscriber()) as client:
-        r = await client.post("/api/dictation", files=recording(), data={"language": "de"})
+        r = await client.post("/api/dictation", files=recording(), data={"language": "es"})
     assert r.status_code == 422 and r.json()["code"] == "invalid_language"
 
 

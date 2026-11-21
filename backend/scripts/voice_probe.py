@@ -42,6 +42,11 @@ PROBES = by_language(
         "Wat is de formule voor de algemene term van een meetkundige rij?",
         "In welk interval moet q liggen opdat de rij naar nul gaat?",
     ],
+    de=[
+        "Sag mir noch einmal die Definition einer arithmetischen Folge.",
+        "Wie lautet die Formel für das allgemeine Glied einer geometrischen Folge?",
+        "In welchem Intervall muss q liegen, damit die Folge gegen null geht?",
+    ],
 )
 _NO_LATEX = re.compile(r"\$[^$]+\$|\\[A-Za-z]+|[A-Za-z0-9)][\^_][A-Za-z0-9({]")
 # What a voice cannot say: LaTeX, and written-out maths. English also refuses a decimal comma.
@@ -50,6 +55,8 @@ UNSPEAKABLE = by_language(
     en=re.compile(_NO_LATEX.pattern + r"|\d,(?!\d{3}(?!\d))\d"),
     # Dutch writes a decimal comma, like French: only the LaTeX and the written-out maths are unspeakable.
     nl=_NO_LATEX,
+    # German too: a decimal comma is spoken (« zwei Komma fünf »).
+    de=_NO_LATEX,
 )
 
 

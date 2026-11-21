@@ -105,8 +105,13 @@ _COORDS_EN = re.compile(rf"\({_BOUND}[^,;()]*[,;]{_BOUND}[^,;()]*\)")
 # too, which on an open exercise's label is the safe direction (one rewrite, never a leaked answer).
 _INTERVAL_NL = re.compile(f"(?:{_INTERVAL.pattern})|(?:{_INTERVAL_EN.pattern})")
 _COORDS_NL = re.compile(f"(?:{_COORDS.pattern})|(?:{_COORDS_EN.pattern})")
-INTERVAL = by_language(fr=_INTERVAL, en=_INTERVAL_EN, nl=_INTERVAL_NL)
-COORDS = by_language(fr=_COORDS, en=_COORDS_EN, nl=_COORDS_NL)
+# German (spec 021 §4.6): NRW material writes intervals as French does (`[0 ; 1]`, `]a ; b[`) and points with a
+# bar, `P(2 | −1,5)`; by hand a German student also writes `(2; 3)`, `(2, 3)` or `(a; b)`. All are recognised.
+_COORDS_BAR = re.compile(rf"\({_BOUND}[^;|()]*\|{_BOUND}[^;|()]*\)")
+_COORDS_DE = re.compile(f"(?:{_COORDS_NL.pattern})|(?:{_COORDS_BAR.pattern})")
+_INTERVAL_DE = _INTERVAL_NL
+INTERVAL = by_language(fr=_INTERVAL, en=_INTERVAL_EN, nl=_INTERVAL_NL, de=_INTERVAL_DE)
+COORDS = by_language(fr=_COORDS, en=_COORDS_EN, nl=_COORDS_NL, de=_COORDS_DE)
 # A measure: the whole label, or what follows its « = » (`\widehat{B} = 40°`, `|AB| = 5 cm`).
 _DEGREES = re.compile(r"^(?:[^=]*=)?(\d+(?:[.,]\d+)?)°$")
 _LENGTH = re.compile(r"^(?:[^=]*=)?(\d+(?:[.,]\d+)?)(mm|cm|dm|m|km)?$")
@@ -116,8 +121,13 @@ _DEGREES_EN = re.compile(rf"^(?:[^=]*=)?{_NUMBER_EN}°$")
 _LENGTH_EN = re.compile(rf"^(?:[^=]*=)?{_NUMBER_EN}(mm|cm|dm|m|km)?$")
 # Dutch writes measures with a decimal comma, as French does.
 _DEGREES_NL, _LENGTH_NL = _DEGREES, _LENGTH
-DEGREES = by_language(fr=_DEGREES, en=_DEGREES_EN, nl=_DEGREES_NL)
-LENGTH = by_language(fr=_LENGTH, en=_LENGTH_EN, nl=_LENGTH_NL)
+# German: a decimal comma, and a dot that groups thousands (« 1.500 m » is 1500 m).
+_THOUSANDS_DOT = re.compile(r"[1-9]\d{0,2}(?:\.\d{3})+(?:,\d+)?")
+_NUMBER_DE = rf"({_THOUSANDS_DOT.pattern}|\d+(?:[.,]\d+)?)"
+_DEGREES_DE = re.compile(rf"^(?:[^=]*=)?{_NUMBER_DE}°$")
+_LENGTH_DE = re.compile(rf"^(?:[^=]*=)?{_NUMBER_DE}(mm|cm|dm|m|km)?$")
+DEGREES = by_language(fr=_DEGREES, en=_DEGREES_EN, nl=_DEGREES_NL, de=_DEGREES_DE)
+LENGTH = by_language(fr=_LENGTH, en=_LENGTH_EN, nl=_LENGTH_NL, de=_LENGTH_DE)
 _MM = {"mm": 1.0, "cm": 10.0, "dm": 100.0, "m": 1000.0, "km": 1e6}
 # LaTeX that changes how a label looks, not what it says.
 _TEX_SIZING = re.compile(
@@ -126,7 +136,8 @@ _TEX_SIZING = re.compile(
 )
 _TEX_TEXT = re.compile(r"\\(?:text|textrm|mathrm|mathit|mbox|operatorname)\{([^{}]*)\}")
 _TEX_DEGREE = re.compile(r"\^\{?\\circ\}?|\\(?:text)?degree(?![A-Za-z])")
-_TEX_DELIMITER = {r"\lbrack": "[", r"\rbrack": "]", r"\lparen": "(", r"\rparen": ")"}
+_TEX_DELIMITER = {"lbrack": "[", "rbrack": "]", "lparen": "(", "rparen": ")", "mid": "|", "vert": "|"}
+_TEX_DELIMITERS = re.compile(rf"\\({'|'.join(_TEX_DELIMITER)})(?![A-Za-z])")
 
 
 def _n(value: float) -> str:
@@ -142,11 +153,10 @@ def _deg(value: float) -> str:
 def _bare(label: str) -> str:
     r"""A label as it reads, whichever way its LaTeX spells it: no `$`, no spaces
     or sizing (`\,`, `~`, `\left`, `\big`), `{,}` a comma and `{-}` a minus,
-    `^\circ` and `\degree` a °, `\text{…}` unwrapped, `\lbrack` a bracket.
+    `^\circ` and `\degree` a °, `\text{…}` unwrapped, `\lbrack` a bracket and `\mid` a bar.
     So `$\left(2{,}5\,;\,{-}1\right)$` reads `(2,5;-1)` and `$37{,}5^\circ$` `37,5°`."""
     text = label.replace("$", "")
-    for command, delimiter in _TEX_DELIMITER.items():
-        text = re.sub(re.escape(command) + r"(?![A-Za-z])", delimiter, text)
+    text = _TEX_DELIMITERS.sub(lambda m: _TEX_DELIMITER[m.group(1)], text)
     text = _TEX_DEGREE.sub("°", text)
     text = _TEX_SIZING.sub("", text)
     text = _TEX_TEXT.sub(r"\1", text)
@@ -162,8 +172,18 @@ def _thousands_comma(text: str) -> float:
     return float(text.replace(",", ""))
 
 
-# How a course writes a number: a decimal comma in French, thousands commas in English.
-NUMBER = by_language(fr=_decimal_comma, en=_thousands_comma, nl=_decimal_comma)
+
+def _german_number(text: str) -> float:
+    """`12.500` and `1.500,5` group thousands with a dot (spec 021 §4.6); anything else has a decimal comma
+    (`1,5`) or, written the English way, a decimal point (`0.125`)."""
+    if _THOUSANDS_DOT.fullmatch(text):
+        text = text.replace(".", "")
+    return float(text.replace(",", "."))
+
+
+# How a course writes a number: a decimal comma in French, thousands commas in English, a decimal comma and
+# thousands dots in German.
+NUMBER = by_language(fr=_decimal_comma, en=_thousands_comma, nl=_decimal_comma, de=_german_number)
 
 
 def _number(text: str, language: CourseLanguage = DEFAULT_COURSE_LANGUAGE) -> float:

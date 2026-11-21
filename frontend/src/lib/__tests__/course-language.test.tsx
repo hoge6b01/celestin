@@ -38,10 +38,15 @@ describe("useCourseLanguage", () => {
     expect(screen.getAllByTestId("probe").map((n) => n.textContent)).toEqual(["en", "fr"]);
   });
 
-  it("knows the three course languages", () => {
-    expect(COURSE_LANGUAGES).toEqual(["fr", "en", "nl"]);
-    expect(isCourseLanguage("nl") && isCourseLanguage("fr") && isCourseLanguage("en")).toBe(true);
-    expect(isCourseLanguage("de") || isCourseLanguage(null) || isCourseLanguage("")).toBe(false);
+  it("knows the four course languages", () => {
+    expect(COURSE_LANGUAGES).toEqual(["fr", "en", "nl", "de"]);
+    expect(
+      isCourseLanguage("nl") &&
+        isCourseLanguage("fr") &&
+        isCourseLanguage("en") &&
+        isCourseLanguage("de"),
+    ).toBe(true);
+    expect(isCourseLanguage("es") || isCourseLanguage(null) || isCourseLanguage("")).toBe(false);
   });
 });
 
@@ -52,7 +57,7 @@ describe("course text is marked with the course's language", () => {
     sections: [{ id: "s1", index: 1, kind: "teach" as const, title: "Terms", goal: "g" }],
   };
 
-  it.each(["fr", "en", "nl"] as const)(
+  it.each(["fr", "en", "nl", "de"] as const)(
     "a chapter title carries the course language (%s)",
     (language) => {
       render(

@@ -167,6 +167,19 @@ def test_the_dutch_instructions_and_voice_state_text() -> None:
     assert json.loads(refused.output)["error"] == "Geen sectie is bezig. Begin er een met start_section."
 
 
+def test_the_german_instructions_and_voice_state_text() -> None:
+    service, _ = _service(RecordingPrompts())
+    chapter = lesson_chapter(name="valid_de.yaml", language="de")
+    assert "Lernpfad des Kapitels" in service.instructions(chapter)
+    seed = service.seed([], _ctx(chapter), now=NOW)
+    text = seed[-1]["content"][0]["text"]
+    assert text.startswith("Es ist Freitag, 11. September, 10:05 Uhr (vormittags).") and "Stand des Lernpfads" in text
+    started = service.execute_tool("start_section", '{"section_id":"intro"}', _ctx(chapter))
+    assert started.state_text and "Aktueller Abschnitt" in started.state_text
+    refused = service.execute_tool("complete_section", '{"section_id":"intro","summary":"x"}', _ctx(chapter))
+    assert json.loads(refused.output)["error"] == "Kein Abschnitt ist in Arbeit. Beginne einen mit start_section."
+
+
 def test_the_voice_state_text_is_in_the_courses_language() -> None:
     service, _ = _service(RecordingPrompts())
     chapter = lesson_chapter(name="valid_en.yaml", language="en")
@@ -187,9 +200,14 @@ def test_build_input_reads_the_chapters_language() -> None:
     from app.services.tutor_service import TutorService
     from tests.fixtures.fake_llm import FakeLLM
 
-    chapter_word = {"fr": "Parcours du chapitre", "en": "Chapter path", "nl": "Traject van het hoofdstuk"}
-    status_word = {"fr": "État du parcours", "en": "Path status", "nl": "Stand van het traject"}
-    for language, name in (("fr", "valid.yaml"), ("en", "valid_en.yaml"), ("nl", "valid_nl.yaml")):
+    chapter_word = {
+        "fr": "Parcours du chapitre",
+        "en": "Chapter path",
+        "nl": "Traject van het hoofdstuk",
+        "de": "Lernpfad des Kapitels",
+    }
+    status_word = {"fr": "État du parcours", "en": "Path status", "nl": "Stand van het traject", "de": "Stand des Lernpfads"}
+    for language, name in (("fr", "valid.yaml"), ("en", "valid_en.yaml"), ("nl", "valid_nl.yaml"), ("de", "valid_de.yaml")):
         prompts = RecordingPrompts()
         service = TutorService(FakeLLM([]), prompts, Settings(openai_api_key="k", _env_file=None))  # type: ignore[arg-type]
         chapter = lesson_chapter(name=name, language=language)

@@ -88,6 +88,7 @@ SECOND_TURN = by_language(
     fr="Explique-moi la somme d'une suite géométrique.",
     en="Explain the sum of a geometric sequence to me.",
     nl="Leg me de som van een meetkundige rij uit.",
+    de="Erklär mir die Summe einer geometrischen Folge.",
 )
 
 

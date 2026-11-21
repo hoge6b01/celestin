@@ -11,7 +11,7 @@ import ast
 from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parents[2]
-CODES = {"fr", "en", "nl"}
+CODES = {"fr", "en", "nl", "de"}
 NAMES = ("language", "locale")
 
 # file (relative to backend/) -> why a comparison is right there.

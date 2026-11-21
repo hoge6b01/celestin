@@ -117,6 +117,23 @@ describe("the learner's sentences, per course language", () => {
     );
   });
 
+  it("are German for a German course (spec 021 R7.4)", () => {
+    expect(read("de")).toEqual([
+      "Ich möchte den Abschnitt „Sequences“ wiederholen.",
+      "Fangen wir mit dem Abschnitt „Sequences“ an?",
+      "Machen wir mit dem Abschnitt „Sequences“ weiter?",
+      "Ich überspringe den Abschnitt „Sequences“.",
+      "Nächster Schritt.",
+      "Nächster Abschnitt.",
+      "Meine Antwort auf die Frage: „Yes“.",
+      "Werkzeug nicht verfügbar. Sag es der Schülerin oder dem Schüler und mach ohne weiter.",
+    ]);
+    expect(learnerSentences("de").work("x = 2")).toBe(
+      "Hier ist meine Arbeit, gelesen von meinem Foto:\nx = 2",
+    );
+    expect(learnerSentences("de").assess("shaky")).toBe("Ich würde sagen, das wackelt noch.");
+  });
+
   it("do not change with the interface language", async () => {
     for (const language of COURSE_LANGUAGES) {
       const expected = read(language);

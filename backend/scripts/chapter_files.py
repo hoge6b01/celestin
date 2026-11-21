@@ -19,15 +19,16 @@ from app.domain.subject import Subject
 from app.services.prompts import PromptLibrary
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
-# Chapter 1 on sequences, in French, English and Dutch (spec 011 R9.1, spec 017): fixtures written for the tests,
+# Chapter 1 on sequences, in French, English, Dutch and German (spec 011 R9.1, specs 017, 021): fixtures written for the tests,
 # so the scripts and the suite run without a real course (a student's material is not in the repository).
 DEFAULT_CHAPTER_DIR = BACKEND_DIR / "tests" / "fixtures" / "chapters" / "suites"
 DEFAULT_ENGLISH_CHAPTER_DIR = BACKEND_DIR / "tests" / "fixtures" / "chapters" / "sequences_en"
 DEFAULT_DUTCH_CHAPTER_DIR = BACKEND_DIR / "tests" / "fixtures" / "chapters" / "rijen_nl"
+DEFAULT_GERMAN_CHAPTER_DIR = BACKEND_DIR / "tests" / "fixtures" / "chapters" / "folgen_de"
 
 
 DEFAULT_CHAPTER_DIRS = by_language(
-    fr=DEFAULT_CHAPTER_DIR, en=DEFAULT_ENGLISH_CHAPTER_DIR, nl=DEFAULT_DUTCH_CHAPTER_DIR
+    fr=DEFAULT_CHAPTER_DIR, en=DEFAULT_ENGLISH_CHAPTER_DIR, nl=DEFAULT_DUTCH_CHAPTER_DIR, de=DEFAULT_GERMAN_CHAPTER_DIR
 )
 
 
@@ -43,6 +44,7 @@ REVISION_CHAPTER_DIRS = by_language(
     fr=(_FIXTURES / "suites", _FIXTURES / "statistique"),
     en=(_FIXTURES / "sequences_en", _FIXTURES / "statistics_en"),
     nl=(_FIXTURES / "rijen_nl", _FIXTURES / "statistiek_nl"),
+    de=(_FIXTURES / "folgen_de", _FIXTURES / "statistik_de"),
 )
 
 

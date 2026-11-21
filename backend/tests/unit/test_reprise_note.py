@@ -41,6 +41,7 @@ def test_the_note_lists_the_cards_in_order_and_says_what_to_do() -> None:
     [
         ("en", "Resuming: this section was already worked on", "- check question: Quel est u₂ ?"),
         ("nl", "Hervatting: aan deze sectie werd al gewerkt", "- begripsvraag: Quel est u₂ ?"),
+        ("de", "Wiederaufnahme: An diesem Abschnitt wurde schon", "- Kontrollfrage: Quel est u₂ ?"),
     ],
 )
 def test_the_note_is_written_in_the_courses_language(language: str, head: str, line: str) -> None:

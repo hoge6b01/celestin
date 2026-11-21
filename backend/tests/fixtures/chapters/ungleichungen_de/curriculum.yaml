@@ -1,0 +1,49 @@
+# Lernpfad für das Kapitel Intervalle und Ungleichungen: eine deutschsprachige Fixture (spec 021)
+# für die Figurenproben, von Hand geschrieben, jede Antwort nachgerechnet. Verweise wie „§4.2“
+# oder „6.1.3“ zeigen auf das benachbarte Pack.
+
+id: ungleichungen
+title: Intervalle und lineare Ungleichungen
+
+sections:
+  - id: intervalle
+    kind: teach
+    title: Intervalle
+    goal: Eine Menge reeller Zahlen als Intervall schreiben und auf einer Zahlengeraden darstellen.
+    pack: ["§4.1"]
+    beats:
+      - Die Definition des Intervalls [a ; b], dann die Tabelle der Intervalle aus dem Kurs.
+      - Das Beispiel [-1 ; 3[ und seine Zahlengerade, mit den Klammern.
+      - Kontrollfrage zum Intervall, das zu einer Ungleichung passt.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: mengen
+    kind: teach
+    title: Vereinigungsmenge und Schnittmenge
+    goal: Die Vereinigungsmenge und die Schnittmenge zweier Mengen oder zweier Intervalle bestimmen.
+    pack: ["§4.2"]
+    beats:
+      - Die Definitionen von Vereinigungsmenge und Schnittmenge.
+      - Die Teiler von 8 und von 12 im Mengendiagramm des Kurses.
+      - Die Schnittmenge und die Vereinigungsmenge von [-3 ; 2] und ]0 ; 5] auf einer Zahlengeraden.
+      - Kontrollfrage zur Schnittmenge zweier Intervalle.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: ungleichungen
+    kind: teach
+    title: Lineare Ungleichungen
+    goal: Eine lineare Ungleichung lösen und die Lösungsmenge schreiben.
+    pack: ["§4.3"]
+    beats:
+      - Die Regel zum Umkehren des Ungleichheitszeichens, an den zwei Beispielen aus dem Kurs.
+      - Die Lösungsmenge als Intervall und auf einer Zahlengeraden.
+      - Kontrollfrage zum Ungleichheitszeichen nach dem Dividieren durch eine negative Zahl.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: ueben
+    kind: practise
+    title: Intervalle, Mengen und Ungleichungen
+    goal: Intervalle schreiben und darstellen, Vereinigungs- und Schnittmengen bestimmen, Ungleichungen lösen.
+    exercises: ["6.1.1", "6.1.2", "6.1.3", "6.2.1", "6.2.2", "6.3.1", "6.3.2", "6.3.3"]
+    count: 3
+    done_when: Drei Aufgaben gelöst, darunter eine Ungleichung, bei der sich das Ungleichheitszeichen umkehrt.

@@ -1,0 +1,51 @@
+# Lernpfad für das Kapitel beschreibende Statistik: eine deutschsprachige Fixture (spec 021)
+# für die Diagrammproben, von Hand neben ihrem Pack geschrieben. Verweise wie „§4.5“ oder
+# „6.1.1“ zeigen auf das benachbarte Pack.
+
+id: statistik
+title: Beschreibende Statistik mit einem Merkmal
+
+sections:
+  - id: grundbegriffe
+    kind: teach
+    title: Grundgesamtheit, Merkmalsträger, Merkmal
+    goal: Die Definitionen des Kurses kennen und die Art eines Merkmals erkennen.
+    pack: ["§4.1", "§4.2", "§4.3"]
+    beats:
+      - Die drei Definitionen aus §4.1 zusammen wiederholen, dann die des Merkmals.
+      - Die drei Arten von Merkmalen, jeweils mit einem Beispiel aus dem Kurs.
+      - Die relative Häufigkeit, als Dezimalzahl und in Prozent.
+      - Kontrollfrage zur Art eines Merkmals.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: diagramme
+    kind: teach
+    title: Eine Datenreihe darstellen
+    goal: Das Diagramm wählen und ablesen, das zu jeder Art von Merkmal passt.
+    pack: ["§4.4", "§4.5", "§4.6", "§4.7"]
+    beats:
+      - Das Kreisdiagramm des Kurses (Lieblingssport) und der Winkel eines Kreisausschnitts.
+      - Das Säulendiagramm der gelesenen Bücher und sein Häufigkeitspolygon.
+      - Das Histogramm der Schulwege, Klassen unterschiedlicher Klassenbreite und die Bezugsbreite.
+      - Das Summenhäufigkeitspolygon der Schulwege.
+      - Kontrollfrage zum Diagramm, das zu einem stetigen Merkmal passt.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: kennwerte
+    kind: teach
+    title: Modalwert, arithmetisches Mittel, Median, Quartile
+    goal: Die Lagemaße berechnen und den Boxplot zeichnen.
+    pack: ["§4.8", "§4.9"]
+    beats:
+      - Modalwert, arithmetisches Mittel und Median am Beispiel der Bücher.
+      - Die Definition der Quartile, Q1 und Q3 der Bücher, dann der Boxplot.
+      - Kontrollfrage zum Median einer Datenreihe mit einer geraden Anzahl von Werten.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: ueben
+    kind: practise
+    title: Diagramme und Kennwerte
+    goal: Eine Datenreihe darstellen und ihre Kennwerte berechnen.
+    exercises: ["6.1.1", "6.1.2", "6.2.1", "6.2.2", "6.3.1"]
+    count: 3
+    done_when: Drei Aufgaben gelöst, darunter ein Histogramm mit Klassen unterschiedlicher Klassenbreite.

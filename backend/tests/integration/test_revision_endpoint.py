@@ -16,7 +16,12 @@ from tests.conftest import tool_call as call
 from tests.fixtures.fake_llm import ExplodingLLM, FakeLLM
 
 CHAPTERS = FIXTURES / "chapters"
-SECOND = {"fr": CHAPTERS / "statistique", "en": CHAPTERS / "statistics_en", "nl": CHAPTERS / "statistiek_nl"}
+SECOND = {
+    "fr": CHAPTERS / "statistique",
+    "en": CHAPTERS / "statistics_en",
+    "nl": CHAPTERS / "statistiek_nl",
+    "de": CHAPTERS / "statistik_de",
+}
 TURN_URL = "/api/revision/turn"
 
 
@@ -784,6 +789,16 @@ async def test_an_english_and_a_dutch_course_refuse_in_their_language(make_clien
             await turn(client, revision["id"], "ok")
         output = next(i for i in llm.calls[1]["input"] if i.get("type") == "function_call_output")
         assert json.loads(output["output"])["error"] == expected
+
+
+async def test_a_german_course_refuses_in_german(make_client) -> None:
+    llm = FakeLLM([[_record(3, "x", "solid"), Completed()], [TextDelta("ok"), Completed()]])
+    client, _ = make_client(llm, email="de-course@example.be", language="de")
+    async with client:
+        revision = await start(client, [client.chapter_id])
+        await turn(client, revision["id"], "ok")
+    output = next(i for i in llm.calls[1]["input"] if i.get("type") == "function_call_output")
+    assert json.loads(output["output"])["error"] == "Kapitel 3 gehört nicht zu dieser Wiederholung. Kapitel der Wiederholung: 1."
 
 
 # --- deletion ---------------------------------------------------------------------------------------------

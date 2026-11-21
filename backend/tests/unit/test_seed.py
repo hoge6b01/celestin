@@ -73,6 +73,26 @@ def test_seed_makes_a_dutch_course_with_the_dutch_chapter(tmp_path, monkeypatch,
         get_settings.cache_clear()
 
 
+def test_seed_makes_a_german_course_with_the_german_chapter(tmp_path, monkeypatch, capsys) -> None:
+    """Spec 021 task 5.2: `--language de`."""
+    from app.config import get_settings
+    from app.db.base import make_session_factory
+    from app.db.repositories import Repositories
+    from scripts.seed import main
+
+    url = _prepare(tmp_path, monkeypatch)
+    try:
+        assert main(["--email", "lea@example.de", "--password", "ein-starkes-passwort", "--language", "de"]) == 0
+        repos = Repositories.from_factory(make_session_factory(make_engine(url)))
+        user = repos.users.by_email("lea@example.de").user
+        (entry,) = repos.courses.list_for_user(user.id)
+        (chapter,) = entry.chapters
+        assert entry.course.name == "Mathematik Klasse 10" and entry.course.language == "de"
+        assert chapter.ready and chapter.title == "Arithmetische und geometrische Folgen"
+    finally:
+        get_settings.cache_clear()
+
+
 def test_seed_refuses_a_non_sqlite_database(monkeypatch, capsys) -> None:
     from app.config import get_settings
     from scripts.seed import main

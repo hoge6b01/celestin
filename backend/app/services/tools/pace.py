@@ -31,6 +31,7 @@ _OUTPUT = by_language(
     fr="Bouton « Étape suivante » activé. Termine ton tour et attends qu'elle clique ou réponde.",
     en="“Next step” button enabled. End your turn and wait for the student to click or answer.",
     nl="Knop “Volgende stap” geactiveerd. Beëindig je beurt en wacht tot de leerling klikt of antwoordt.",
+    de="Button „Nächster Schritt“ aktiviert. Beende deinen Zug und warte, bis die Schülerin oder der Schüler klickt oder antwortet.",
 )
 
 

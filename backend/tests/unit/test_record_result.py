@@ -91,9 +91,11 @@ def test_a_result_is_noted_in_the_turns_memory_only() -> None:
         ("fr", 3, "suites", "Le chapitre 3 ne fait pas partie de cette révision. Chapitres de la révision : 1, 2."),
         ("en", 3, "sequences", "Chapter 3 is not part of this revision. Chapters in the revision: 1, 2."),
         ("nl", 3, "rijen", "Hoofdstuk 3 hoort niet bij deze herhaling. Hoofdstukken van de herhaling: 1, 2."),
+        ("de", 3, "folgen", "Kapitel 3 gehört nicht zu dieser Wiederholung. Kapitel der Wiederholung: 1, 2."),
         ("fr", 2, "suites", "La section « suites » n'est pas dans le chapitre 2. Sections de ce chapitre : vocabulaire, graphiques, parametres, pratique."),
         ("en", 1, "nope", "The section “nope” is not in chapter 1. Sections of this chapter: sequences, geometric, practice, summary."),
         ("nl", 1, "nope", "De sectie “nope” zit niet in hoofdstuk 1. Secties van dit hoofdstuk: rijen, meetkundig, oefeningen, samenvatting."),
+        ("de", 1, "nope", "Der Abschnitt „nope“ ist nicht in Kapitel 1. Abschnitte dieses Kapitels: folgen, geometrisch, uebungen, zusammenfassung."),
     ],
 )
 def test_a_result_outside_the_revision_is_refused_in_the_course_language(language, chapter, section, message) -> None:
@@ -153,6 +155,18 @@ def test_the_event_carries_its_wire_fields_only() -> None:
     )
     assert event_of(registry.execute("record_result", _args(2, "graphiques", "todo"), _ctx()), "nl").marker == (
         "genoteerd: te herhalen · 2. Représenter une série"
+    )
+
+
+def test_a_german_revision_answers_in_german_and_the_marker_follows_the_interface() -> None:
+    """Spec 021: the tool's output follows the course language (German here), the marker the interface's."""
+    outcome = registry.execute("record_result", _args(1, "folgen", "shaky"), _ctx("de"))
+    assert outcome.output == (
+        "Selbsteinschätzung notiert. Diese Wiederholung: 0 sitzt, 1 wackelt, 0 nochmal üben (1 Abschnitt(e) notiert)."
+    )
+    assert str(outcome.marker) == "noté : fragile · 1. Folgen und arithmetische Folgen"
+    assert event_of(registry.execute("record_result", _args(2, "graphiques", "todo"), _ctx()), "de").marker == (
+        "notiert: nochmal üben · 2. Représenter une série"
     )
 
 

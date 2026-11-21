@@ -1,0 +1,77 @@
+Kapitel 2 — Beschreibende Statistik mit einem Merkmal
+
+1. Grundbegriffe
+Definition: Die Grundgesamtheit ist die Menge aller Merkmalsträger, auf die sich eine Untersuchung bezieht.
+Definition: Ein Merkmalsträger ist ein einzelnes Element der Grundgesamtheit.
+Definition: Eine Stichprobe ist ein Teil der Grundgesamtheit, der tatsächlich beobachtet wird.
+[Abbildung: Mengendiagramm mit ineinanderliegenden Mengen: eine große Menge „Grundgesamtheit“ enthält eine kleinere Menge „Stichprobe“; ein Kreuz „Merkmalsträger“ innerhalb der Stichprobe]
+Definition: Die Eigenschaft, die untersucht wird, heißt das Merkmal.
+Ein Merkmal ist qualitativ, wenn seine Ausprägungen keine Zahlen sind (Farbe, Lieblingssport...).
+Ein Merkmal ist quantitativ diskret, wenn es nur einzelne Werte annimmt (Anzahl der Bücher, Schuhgröße...).
+Ein Merkmal ist quantitativ stetig, wenn es jeden Wert eines Intervalls annehmen kann (Körpergröße, Masse, Zeit...). Die Werte werden dann in Klassen [a ; b[ zusammengefasst.
+
+2. Häufigkeiten
+Die absolute Häufigkeit eines Wertes ist die Anzahl der Merkmalsträger mit diesem Wert. Die Gesamtzahl wird N genannt.
+Die relative Häufigkeit eines Wertes ist seine absolute Häufigkeit geteilt durch die Gesamtzahl: h = H / N. Sie wird als Dezimalzahl (0,25) oder in Prozent (25 %) geschrieben.
+
+3. Ein qualitatives Merkmal darstellen
+Beispiel: Lieblingssport von 40 Schülerinnen und Schülern einer 9. Klasse.
+Fußball: 14 ; Basketball: 10 ; Schwimmen: 8 ; Tennis: 8.
+Kreisdiagramm: Der Winkel eines Kreisausschnitts ist proportional zur absoluten Häufigkeit: Winkel = (absolute Häufigkeit / N) · 360°.
+[Abbildung: Kreisdiagramm, vier Kreisausschnitte: Fußball 126°, Basketball 90°, Schwimmen 72°, Tennis 72°]
+
+Seite 2
+
+4. Ein diskretes Merkmal darstellen
+Beispiel: Anzahl der Bücher, die 24 Schülerinnen und Schüler im letzten Monat gelesen haben.
+Anzahl der Bücher: 0 ; 1 ; 2 ; 3 ; 4 ; 5
+Absolute Häufigkeit: 3 ; 5 ; 7 ; 5 ; 3 ; 1
+Ein diskretes Merkmal wird mit einem Säulendiagramm dargestellt: die Werte auf der waagerechten Achse, die absoluten Häufigkeiten auf der senkrechten Achse. Verbindet man die oberen Enden der Säulen, erhält man das Häufigkeitspolygon.
+[Abbildung: Säulendiagramm, waagerechte Achse „Gelesene Bücher“, senkrechte Achse „Absolute Häufigkeit“, Säulen 0 → 3, 1 → 5, 2 → 7, 3 → 5, 4 → 3, 5 → 1, Häufigkeitspolygon rot eingezeichnet]
+
+5. Ein stetiges Merkmal darstellen
+Beispiel: täglicher Schulweg (in Minuten) von 50 Schülerinnen und Schülern.
+Klasse: [0 ; 10[ ; [10 ; 20[ ; [20 ; 30[ ; [30 ; 50[ ; [50 ; 90[
+Absolute Häufigkeit: 5 ; 10 ; 15 ; 12 ; 8
+Ein stetiges Merkmal wird mit einem Histogramm dargestellt: aneinandergrenzende Rechtecke, eines pro Klasse. Der Flächeninhalt jedes Rechtecks ist proportional zur absoluten Häufigkeit. Sind die Klassen nicht alle gleich breit, wählt man eine Bezugsbreite (hier 10 Minuten), und die Höhe eines Rechtecks ist die auf diese Breite umgerechnete absolute Häufigkeit: Höhe = absolute Häufigkeit · 10 / Klassenbreite.
+[Abbildung: Histogramm, waagerechte Achse „Schulweg (min)“ mit den Werten 0, 10, 20, 30, 50, 90, senkrechte Achse „Absolute Häufigkeit pro 10 Minuten“, Höhen 5 ; 10 ; 15 ; 6 ; 2]
+Jede Klasse enthält ihre linke Grenze und schließt ihre rechte Grenze aus.
+
+Seite 3
+
+6. Kumulierte Häufigkeiten
+Die kumulierte Häufigkeit einer Klasse ist die Summe der absoluten Häufigkeiten dieser Klasse und aller Klassen davor.
+Schulwege: 5 ; 15 ; 30 ; 42 ; 50. Kumulierte relative Häufigkeiten: 10 % ; 30 % ; 60 % ; 84 % ; 100 %.
+Das Summenhäufigkeitspolygon verbindet die Punkte, deren x-Koordinate die obere Grenze jeder Klasse und deren y-Koordinate die kumulierte Häufigkeit ist; es beginnt mit 0 an der unteren Grenze der ersten Klasse.
+[Abbildung: Summenhäufigkeitspolygon, Punkte (0 | 0), (10 | 10), (20 | 30), (30 | 60), (50 | 84), (90 | 100), senkrechte Achse in %]
+
+7. Lagemaße
+Der Modalwert ist der Wert mit der größten absoluten Häufigkeit; bei einem stetigen Merkmal spricht man von der Modalklasse.
+Das arithmetische Mittel ist x̄ = (H₁x₁ + H₂x₂ + ... + Hₖxₖ) / N. Bei einem stetigen Merkmal ist xᵢ die Klassenmitte jeder Klasse.
+Der Median M teilt die geordneten Daten in zwei gleich große Gruppen. Ist N ungerade, ist er der Wert an der Stelle (N + 1)/2; ist N gerade, ist er der Mittelwert der Werte an den Stellen N/2 und N/2 + 1.
+Beispiel (Bücher): Modalwert 2; x̄ = 51 / 24 = 2,125; M = 2.
+
+8. Quartile und Boxplot
+Das erste Quartil Q₁ ist der kleinste Wert der Datenreihe, für den mindestens 25 % der Werte kleiner oder gleich diesem Wert sind. Das dritte Quartil Q₃ ist der kleinste Wert, für den mindestens 75 % der Werte kleiner oder gleich diesem Wert sind.
+Beispiel (Bücher): Q₁ = 1; Q₃ = 3.
+Ein Boxplot wird maßstabsgetreu gezeichnet: ein Rechteck (die Box) von Q₁ bis Q₃, durch den Median geteilt, und zwei Whisker bis zum Minimum und zum Maximum.
+[Abbildung: waagerechter Boxplot, Minimum 0, Q₁ 1, Median 2, Q₃ 3, Maximum 5]
+
+Seite 4 — Aufgaben
+
+Aufgabe 1. Das Alter der 20 Mitglieder eines Schachvereins: 14: 3 ; 15: 5 ; 16: 6 ; 17: 4 ; 18: 2.
+a) Zeichne das Säulendiagramm. b) Gib den Modalwert an. c) Berechne das arithmetische Mittel. d) Bestimme den Median.
+Lösungen: b) 16 ; c) x̄ = 317 / 20 = 15,85 ; d) M = 16.
+
+Aufgabe 2. Bestimme für das Alter aus Aufgabe 1 Q₁ und Q₃ und zeichne den Boxplot.
+Lösungen: Q₁ = 15 ; Q₃ = 17.
+
+Aufgabe 3. Wartezeit (in Minuten) von 40 Patientinnen und Patienten in einer Klinik: [0 ; 5[: 4 ; [5 ; 10[: 8 ; [10 ; 20[: 16 ; [20 ; 40[: 12.
+a) Zeichne das Histogramm mit einer Bezugsbreite von 5 Minuten. b) Welche Klasse hat die größte absolute Häufigkeit?
+Lösungen: a) Höhen 4 ; 8 ; 8 ; 3 ; b) [10 ; 20[.
+
+Aufgabe 4. Berechne für die Wartezeiten aus Aufgabe 3 die kumulierten relativen Häufigkeiten und zeichne ihr Polygon.
+Lösungen: 10 % ; 30 % ; 70 % ; 100 %.
+
+Aufgabe 5. 48 Schülerinnen und Schüler haben ihr Mittagessen gewählt: Nudeln 20, Salat 12, belegtes Brötchen 16. Berechne den Winkel jedes Kreisausschnitts im Kreisdiagramm.
+Lösungen: 150° ; 90° ; 120°.

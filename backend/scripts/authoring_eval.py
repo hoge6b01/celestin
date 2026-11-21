@@ -49,6 +49,12 @@ FIXTURES = by_language(
         ("injection_nl.txt", "mathematics"),
         ("maths_statistiek_nl.txt", "mathematics"),
     ],
+    de=[
+        ("maths_quadratisch_de.txt", "mathematics"),
+        ("physik_gleichfoermig_de.txt", "sciences"),
+        ("injection_de.txt", "mathematics"),
+        ("maths_statistik_de.txt", "mathematics"),
+    ],
 )
 
 

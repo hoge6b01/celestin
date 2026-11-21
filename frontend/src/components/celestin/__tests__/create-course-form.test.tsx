@@ -128,3 +128,34 @@ describe("CreateCourseForm: Dutch (spec 017)", () => {
     });
   });
 });
+
+describe("CreateCourseForm: German (spec 021)", () => {
+  const FOUR: Subject[] = [
+    { id: "mathematics", label: "Mathematik", languages: ["fr", "en", "nl", "de"] },
+    { id: "sciences", label: "Naturwissenschaften", languages: ["fr", "en", "nl", "de"] },
+  ];
+
+  it("lists the four languages by their own names", () => {
+    mount(FOUR);
+    const select = screen.getByLabelText("Langue du cours") as HTMLSelectElement;
+    expect([...select.options].map((o) => [o.value, o.textContent, o.lang])).toEqual([
+      ["fr", "Français", "fr"],
+      ["en", "English", "en"],
+      ["nl", "Nederlands", "nl"],
+      ["de", "Deutsch", "de"],
+    ]);
+  });
+
+  it("starts on German under a German interface, in German words, and sends the choice", async () => {
+    await withLocale("de", async () => {
+      const onCreate = mount(FOUR);
+      const select = screen.getByLabelText("Kurssprache") as HTMLSelectElement;
+      expect(select.value).toBe("de");
+      expect(screen.getByText(/Célestin unterrichtet in dieser Sprache/)).toBeTruthy();
+      fireEvent.change(screen.getByLabelText("Kursname"), { target: { value: "Kurs" } });
+      fireEvent.change(screen.getByLabelText("Fach"), { target: { value: "sciences" } });
+      fireEvent.click(screen.getByRole("button", { name: "Kurs anlegen" }));
+      await waitFor(() => expect(onCreate).toHaveBeenCalledWith("Kurs", "sciences", "de"));
+    });
+  });
+});

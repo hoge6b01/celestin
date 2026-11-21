@@ -10,7 +10,7 @@
  */
 import { createContext, useContext, type ReactNode } from "react";
 
-export const COURSE_LANGUAGES = ["fr", "en", "nl"] as const;
+export const COURSE_LANGUAGES = ["fr", "en", "nl", "de"] as const;
 export type CourseLanguage = (typeof COURSE_LANGUAGES)[number];
 export const DEFAULT_COURSE_LANGUAGE: CourseLanguage = "fr";
 

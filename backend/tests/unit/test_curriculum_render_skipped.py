@@ -17,8 +17,13 @@ from app.services import curriculum_render as render
 from tests.fixtures.curricula import curriculum
 
 SNAPSHOTS = Path(__file__).parent.parent / "fixtures" / "render"
-CURRICULA = {"fr": curriculum(), "en": curriculum("valid_en.yaml"), "nl": curriculum("valid_nl.yaml")}
-SUFFIX = {"fr": "", "en": "_en", "nl": "_nl"}
+CURRICULA = {
+    "fr": curriculum(),
+    "en": curriculum("valid_en.yaml"),
+    "nl": curriculum("valid_nl.yaml"),
+    "de": curriculum("valid_de.yaml"),
+}
+SUFFIX = {"fr": "", "en": "_en", "nl": "_nl", "de": "_de"}
 LANGUAGES = list(CURRICULA)
 
 
@@ -61,6 +66,15 @@ WORDS = {
         "lead": "Secties in de volgorde die jij voorstelt.",
         "skip_head": "Sectie overgeslagen.",
         "still": "Sectie nog bezig: “2. ",
+    },
+    "de": {
+        "count": "1 abgeschlossen und 1 übersprungen, von 3 Abschnitt(en).",
+        "named": "Übersprungene Abschnitte: „2. ",
+        "next": 'start_section("bilan")',
+        "finished": "Jeder Abschnitt ist erledigt oder übersprungen",
+        "lead": "Abschnitte in der Reihenfolge, die du vorschlägst.",
+        "skip_head": "Abschnitt übersprungen.",
+        "still": "Abschnitt noch in Arbeit: „2. ",
     },
 }
 
@@ -144,7 +158,7 @@ def test_a_completion_that_ends_the_chapter_is_what_it_always_was(language: str)
     """A completion records only where the page turned (spec 019): « chapter finished » is
     said as before spec 019, skipped sections or not; the state message names them."""
     assert render.completion(None, None, language).endswith(  # type: ignore[arg-type]
-        {"fr": "Chapitre terminé.", "en": "Chapter finished.", "nl": "Hoofdstuk afgerond."}[language]
+        {"fr": "Chapitre terminé.", "en": "Chapter finished.", "nl": "Hoofdstuk afgerond.", "de": "Kapitel abgeschlossen."}[language]
     )
 
 

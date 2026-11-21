@@ -47,6 +47,14 @@ WORDS = {
         "off_topic": "Buiten het onderwerp",
         "voice_titles": ("Wanneer we hardop praten", "hardop"),
     },
+    "de": {
+        "subject_words": ("mathematik", "physik", "arithmetische folge", "u₁", "a₁", "gymnasium", "nrw", "bundesland"),
+        "gender": r"\b(?:er|sie|ihm|ihn|ihr|ihre[mnrs]?|sein|seine[mnrs]?)\b",
+        "to_check": "Zu prüfende Punkte",
+        "lesson": "**Lektion.**",
+        "off_topic": "Nicht zum Thema",
+        "voice_titles": ("Wenn wir laut miteinander sprechen", "laut"),
+    },
 }
 MARKERS = (
     "<!-- SUBJECT -->",
@@ -144,6 +152,7 @@ TRANSCRIPTION = {
     "fr": ("--- page N ---", "[manuscrit]", "[incertain:", "[illisible]", "[figure :", "[barré:", "[page vide]"),
     "en": ("--- page N ---", "[handwritten]", "[uncertain:", "[illegible]", "[figure:", "[crossed out:", "[empty page]"),
     "nl": ("--- page N ---", "[handgeschreven]", "[onzeker:", "[onleesbaar]", "[figuur:", "[doorgestreept:", "[lege pagina]"),
+    "de": ("--- page N ---", "[handschriftlich]", "[unsicher:", "[unleserlich]", "[Abbildung:", "[durchgestrichen:", "[leere Seite]"),
 }
 
 
@@ -303,6 +312,7 @@ CITED = {
     "fr": ("« Étape suivante »", "« Section suivante »", "On commence la section …", "Ma réponse à la question : …"),
     "en": ("“Next step”", "“Next section”", "Shall we start the section", "My answer to the question: …"),
     "nl": ("“Volgende stap”", "“Volgende sectie”", "Beginnen we met de sectie", "Mijn antwoord op de vraag: …"),
+    "de": ("„Nächster Schritt“", "„Nächster Abschnitt“", "Fangen wir mit dem Abschnitt", "Meine Antwort auf die Frage: …"),
 }
 
 
@@ -323,12 +333,95 @@ def test_the_work_reading_prompt_keeps_the_transcription_conventions(language: s
         "fr": ("[incertain:", "[illisible]", "[rien de lisible]"),
         "en": ("[uncertain:", "[illegible]", "[nothing legible]"),
         "nl": ("[onzeker:", "[onleesbaar]", "[niets leesbaar]"),
+        "de": ("[unsicher:", "[unleserlich]", "[nichts lesbar]"),
     }[language]
     for mark in (doubt, illegible, nothing, "$…$"):
         assert mark in text
-    answer = {"fr": "## La réponse", "en": "## The answer", "nl": "## Het antwoord"}[language]
+    answer = {"fr": "## La réponse", "en": "## The answer", "nl": "## Het antwoord", "de": "## Die Antwort"}[language]
     assert "```" not in text.split(answer)[0]
     if language == "en":
         assert "never translate" in text.lower()
     if language == "nl":
         assert "vertaal nooit" in text.lower()
+    if language == "de":
+        assert "übersetze nie" in text.lower()
+
+
+# --- spec 021: the German set --------------------------------------------------------------------------------------
+
+GERMAN_TWINS = [t for t in TWINS if (PROMPTS / f"{t}.de.md").exists()]
+
+# Function words no German sentence needs. Not « du », « des » (French), « will » (English), nor the Dutch words
+# German shares (« in », « als », « was »); « je » is avoided in the German files, so it may stay out too.
+_FRENCH_STOPWORDS_DE = re.compile(
+    r"\b(?:le|la|est|pour|une|avec|dans|que|qui|mais|donc|nous|vous|sont|cette|ces|elle|ils|aux|sur|ou|"
+    r"tu|ta|tes|ne|au|chaque|toujours|jamais|sans)\b",
+    re.IGNORECASE,
+)
+_ENGLISH_STOPWORDS_DE = re.compile(
+    r"\b(?:the|and|are|with|from|that|this|which|your|you|does|not|only|never|always|must|should|have|has|"
+    r"for|each|every|before|after|then|when|if)\b"
+)
+_DUTCH_STOPWORDS_DE = re.compile(r"\b(?:het|een|niet|jij|zijn|wordt|maar|ook|deze|zoals|altijd|nooit|leerling)\b", re.IGNORECASE)
+# German quotes „…“ hold an example, not prose of the file.
+_QUOTED_DE = re.compile(r"„[^“]*“")
+
+
+def test_every_german_file_has_a_french_twin() -> None:
+    german = sorted(str(p.relative_to(PROMPTS)).replace(".de.md", "") for p in PROMPTS.glob("**/*.de.md"))
+    assert set(german) <= set(TWINS), sorted(set(german) - set(TWINS))
+    assert set(GERMAN_TWINS) == set(TWINS)  # the whole set (spec 021 R3.1)
+
+
+@pytest.mark.parametrize("twin", GERMAN_TWINS)
+def test_a_german_file_has_the_skeleton_of_its_french_twin(twin: str) -> None:
+    fr, de = read(f"{twin}.md", "fr"), read(f"{twin}.md", "de")
+    assert outline(de) == outline(fr), twin
+    for marker in (*MARKERS, VOICE_START.strip(), VOICE_END.strip()):
+        assert de.count(marker) == fr.count(marker), (twin, marker)
+    assert names(de) == names(fr), (twin, names(de) ^ names(fr))
+
+
+@pytest.mark.parametrize("twin", [t for t in GERMAN_TWINS if t.startswith("templates/")])
+def test_a_german_template_keeps_the_positions_of_the_french_one(twin: str) -> None:
+    subject = twin.split("/")[1].split(".")[0]
+    french, german = LIBRARY.template(subject, "fr"), LIBRARY.template(subject, "de")  # type: ignore[arg-type]
+    assert [n for n, _ in german.headings] == [n for n, _ in french.headings]
+    assert german.exercises_section == french.exercises_section
+    assert german.text.count("###") == french.text.count("###")
+    assert german.headings[-1][1] == WORDS["de"]["to_check"]
+
+
+@pytest.mark.parametrize("twin", GERMAN_TWINS)
+def test_a_german_file_carries_no_french_english_or_dutch_prose(twin: str) -> None:
+    prose = _QUOTED_DE.sub(" ", _QUOTED.sub(" ", read(f"{twin}.md", "de").replace("Célestin", "Celestin")))
+    for name, words in (("French", _FRENCH_STOPWORDS_DE), ("English", _ENGLISH_STOPWORDS_DE), ("Dutch", _DUTCH_STOPWORDS_DE)):
+        found = words.findall(prose)
+        assert not found, (twin, name, sorted(set(found)))
+
+
+def test_the_german_transcription_prompts_never_translate_and_separate_readings_with_oder() -> None:
+    """Spec 021 R4.1 and design §1 decision 2: the bar is a German point's separator, so readings take « oder »."""
+    for name in ("transcription/transcribe.md", "transcription/verify.md"):
+        text = read(name, "de")
+        assert "übersetze nie" in text.lower(), name
+        assert "[unsicher: a | b]" not in text, name
+    assert "oder" in read("transcription/transcribe.md", "de").split("[unsicher:")[1].split("]")[0]
+
+
+def test_the_german_authoring_prompt_reads_a_transcription_of_pages() -> None:
+    pack = read("authoring/pack.md", "de")
+    assert "Wenn das Material eine Transkription von Seiten ist" in pack and "S. 5" in pack
+    for mark in ("[handschriftlich]", "[unsicher: a oder b]", "[unleserlich]", "[Abbildung: …]", "[durchgestrichen: …]"):
+        assert mark in pack, mark
+    assert "<materiel>" in pack
+    curriculum = read("authoring/curriculum.md", "de")
+    assert "<chapitre>" in curriculum and "Zu prüfende Punkte" in curriculum
+
+
+def test_the_german_subject_prompts_write_the_nrw_notation() -> None:
+    """Spec 021 R7.1: the board section of the maths prompt states the NRW forms."""
+    maths = read("subjects/mathematics.md", "de")
+    for form in ("0{,}45", "10 000", "]a ; b[", "P(2 | −1,5)", "P(2 \\mid -1{,}5)", "12,5 %"):
+        assert form in maths, form
+    assert "Wenn das Material anders schreibt, folgst du dem Material." in maths

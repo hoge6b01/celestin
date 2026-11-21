@@ -21,7 +21,12 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 DEFAULT_JUDGE_MODEL = "claude-opus-5-5"
-LANGUAGE_NAMES = {"fr": "French (French-speaking Belgium)", "en": "English", "nl": "Dutch (Flemish, as written in Flanders)"}
+LANGUAGE_NAMES = {
+    "fr": "French (French-speaking Belgium)",
+    "en": "English",
+    "nl": "Dutch (Flemish, as written in Flanders)",
+    "de": "German (as taught in Germany, NRW)",
+}
 
 
 class Verdict(BaseModel):

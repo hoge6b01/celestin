@@ -1,0 +1,59 @@
+Kapitel 3: Quadratische Gleichungen
+
+1. Definition
+Eine quadratische Gleichung mit einer Unbekannten ist eine Gleichung, die sich in der Form
+ax² + bx + c = 0 schreiben lässt, wobei a, b, c reelle Zahlen sind und a ≠ 0.
+Die Zahlen a, b und c heißen die Koeffizienten der Gleichung.
+
+Beispiele: 3x² − 5x + 2 = 0 (a = 3, b = −5, c = 2)
+x² − 16 = 0 (a = 1, b = 0, c = −16)
+
+2. Die Diskriminante
+Die Diskriminante der Gleichung ax² + bx + c = 0 ist die Zahl
+D = b² − 4ac
+
+Merksatz (auswendig lernen):
+• Wenn D > 0, hat die Gleichung zwei verschiedene Lösungen: x₁ = (−b − √D) / 2a und x₂ = (−b + √D) / 2a
+• Wenn D = 0, hat die Gleichung genau eine (doppelte) Lösung: x = −b / 2a
+• Wenn D < 0, hat die Gleichung keine reelle Lösung: L = { }
+
+Schreib die Lösungsmenge immer als L = { … }.
+
+Seite 2
+
+3. Sonderfälle (keine Diskriminante nötig)
+• Wenn b = 0: ax² + c = 0 ⇔ x² = −c/a. Beispiel: x² − 16 = 0 ⇔ x² = 16 ⇔ x = −4 oder x = 4. L = {−4; 4}
+• Wenn c = 0: x ausklammern. Beispiel: 2x² − 8x = 0 ⇔ 2x(x − 4) = 0 ⇔ x = 0 oder x = 4. L = {0; 4}
+
+Achtung: Teile nie beide Seiten durch x, du würdest die Lösung x = 0 verlieren!
+
+4. Summe und Produkt der Lösungen
+Wenn D ≥ 0: x₁ + x₂ = −b/a und x₁ · x₂ = c/a
+
+AUFGABEN
+
+Aufgabe 1. Löse in den reellen Zahlen:
+a) x² − 7x + 10 = 0
+b) 9x² − 12x + 4 = 0
+c) 2x² + x + 3 = 0
+
+Aufgabe 1 Lösungen (im Unterricht besprochen)
+a) D = 49 − 40 = 9; x₁ = (7 − 3)/2 = 2; x₂ = (7 + 3)/2 = 5; L = {2; 5}
+b) D = 144 − 144 = 0; x = 12/18 = 2/3; L = {2/3}
+c) D = 1 − 24 = −23 < 0; L = { }
+
+Aufgabe 2. Löse, ohne D zu verwenden:
+a) 3x² − 48 = 0
+b) 4x² + 10x = 0
+
+Aufgabe 2 Lösungen
+a) x² = 16, also L = {−4; 4}
+b) 2x(2x + 5) = 0, also L = {0; −5/2}
+
+Aufgabe 3. Textaufgabe. Ein Rechteck ist 3 cm länger als breit, und sein Flächeninhalt beträgt 70 cm². Wie lang sind seine Seiten?
+Lösung: Nenne b die Breite, also b(b + 3) = 70, das heißt b² + 3b − 70 = 0. D = 9 + 280 = 289, √D = 17.
+b = (−3 − 17)/2 = −10 oder b = (−3 + 17)/2 = 7. Eine Breite kann nicht negativ sein.
+Seitenlängen: 7 cm und 10 cm.
+
+Aufgabe 4. Gib, ohne die Gleichung zu lösen, die Summe und das Produkt der Lösungen von 3x² + 5x − 2 = 0 an.
+(keine Lösung angegeben)

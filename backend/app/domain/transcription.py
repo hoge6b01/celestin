@@ -70,6 +70,17 @@ MARKERS = by_language(
         disordered="paginamarkeringen dubbel of in de verkeerde volgorde",
         empty_without_marker="lege pagina zonder “[lege pagina]”",
     ),
+    de=Markers(
+        handwritten="[handschriftlich",
+        uncertain="[unsicher",
+        illegible="[unleserlich]",
+        empty_page="[leere Seite]",
+        nothing="[nichts lesbar]",
+        missing="fehlende Markierung für Seite ",
+        unexpected="unerwartete Seite ",
+        disordered="Seitenmarkierungen doppelt oder in falscher Reihenfolge",
+        empty_without_marker="leere Seite ohne „[leere Seite]“",
+    ),
 )
 _MARKER = re.compile(r"^\s*-{3}\s*page\s+(\d+)\s*-{3}\s*$", re.IGNORECASE | re.MULTILINE)
 _DIGIT = re.compile(r"\d")

@@ -159,7 +159,32 @@ export const DUTCH: Notation = {
   boxStats: ["Minimum", "Q1", "Mediaan", "Q3", "Maximum"],
 };
 
-export const NOTATION: Record<CourseLanguage, Notation> = { fr: FRENCH, en: ENGLISH, nl: DUTCH };
+// German (spec 021 §5.2): the NRW Gymnasium notation. An explicit object, not a spread of FRENCH, so that a later
+// change to the Belgian notation does not move the German board; where the NRW form is the French one (decimal
+// comma, `1000` and `10 000`, `12,5 %`, `[2 ; 5[`, `]−∞ ; 2]`), the French function is named on purpose. Points
+// take a bar: `(2 | −1,5)`. `de-DE` is not used here: it would group `10.000` with a dot.
+export const GERMAN: Notation = {
+  number: formatNumber,
+  value: formatValue,
+  pair: (x, y) => `(${formatNumber(x)} | ${formatNumber(y)})`,
+  bound: formatBound,
+  interval: formatInterval,
+  classLabel,
+  measureName: {
+    effectif: "Absolute Häufigkeit",
+    frequence: "Relative Häufigkeit",
+    pourcentage: "Prozent",
+  },
+  boxStats: ["Minimum", "unteres Quartil", "Median", "oberes Quartil", "Maximum"],
+  separator: " ; ",
+};
+
+export const NOTATION: Record<CourseLanguage, Notation> = {
+  fr: FRENCH,
+  en: ENGLISH,
+  nl: DUTCH,
+  de: GERMAN,
+};
 
 export const notationFor = (language: CourseLanguage): Notation => NOTATION[language];
 

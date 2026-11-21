@@ -150,6 +150,7 @@ _UNKNOWN = by_language(
     fr="Section inconnue dans le parcours actuel.",
     en="Unknown section in the current path.",
     nl="Onbekende sectie in het huidige traject.",
+    de="Unbekannter Abschnitt im aktuellen Lernpfad.",
 )
 
 

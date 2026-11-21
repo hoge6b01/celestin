@@ -1,0 +1,3 @@
+Stand des Lernpfads: 1 von 3 Abschnitt(en) abgeschlossen.
+Kein Abschnitt in Arbeit. Als Nächstes: „2. Übungen“ (Übungen).
+Beginne ihn mit start_section("exos").

@@ -1,0 +1,38 @@
+# Lernpfad für das Kapitel Koordinatengeometrie: eine deutschsprachige Fixture (spec 021) für
+# die Figurenproben, von Hand geschrieben, jede Antwort nachgerechnet. Verweise wie „§4.4“ oder
+# „6.2.2“ zeigen auf das benachbarte Pack.
+
+id: koordinatengeometrie
+title: Koordinatengeometrie in der Ebene
+
+sections:
+  - id: koordinaten
+    kind: teach
+    title: Koordinatensystem, Mittelpunkt und Abstand
+    goal: Punkte in einem kartesischen Koordinatensystem angeben, einen Mittelpunkt und einen Abstand bestimmen.
+    pack: ["§4.1", "§4.2"]
+    beats:
+      - Das kartesische Koordinatensystem des Kurses und die Punkte A, B und C.
+      - Die Formeln für den Mittelpunkt und den Abstand, am Beispiel aus dem Kurs.
+      - Kontrollfrage zum Mittelpunkt einer Strecke.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: geraden
+    kind: teach
+    title: Geraden
+    goal: Die Gleichung einer Geraden aufstellen, parallele oder orthogonale Geraden erkennen und einen Schnittpunkt bestimmen.
+    pack: ["§4.3", "§4.4", "§4.5"]
+    beats:
+      - Die Gleichung der Geraden AB aus dem Kurs, zuerst die Steigung, dann der y-Achsenabschnitt.
+      - Parallele und orthogonale Geraden; das Dreieck ABC mit seinem rechten Winkel bei B und seinen Markierungen.
+      - Der Schnittpunkt der Geraden g1 und g2 aus dem Kurs.
+      - Kontrollfrage zu zwei orthogonalen Geraden.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: ueben
+    kind: practise
+    title: Mittelpunkte, Abstände und Geraden
+    goal: Mittelpunkte, Abstände, Geradengleichungen und Schnittpunkte bestimmen.
+    exercises: ["6.1.1", "6.1.2", "6.2.1", "6.2.2", "6.2.3"]
+    count: 3
+    done_when: Drei Aufgaben gelöst, darunter ein Schnittpunkt.
