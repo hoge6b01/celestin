@@ -1,6 +1,6 @@
 # Course language
 
-A course has a language, `fr`, `en` or `nl` (Dutch, as written in Flanders), chosen when it is created and never changed (spec 011; Dutch is spec 017).
+A course has a language, `fr`, `en`, `nl` (Dutch, as written in Flanders) or `de` (German, as taught in Germany), chosen when it is created and never changed (spec 011; Dutch is spec 017, German spec 021).
 It is the language of the student's material, the pack, the curriculum, Célestin's speech, the
 voice session and the board's notation. It is **not** the interface language
 ([i18n.md](./i18n.md)): a student can read an English or a Dutch course under a French interface, and the
@@ -22,7 +22,7 @@ language does not become a course language by accident.
 Every French course reads, byte for byte, what it read before the course language existed:
 `tests/fixtures/render/system_text_sha*.txt`, the render goldens, `board_declarations.json`, the
 voice session configuration, the golden SSE transcripts and the French rule tests are untouched.
-English and Dutch are added beside French, never in place of it. A function that gained a `language`
+English, Dutch and German are added beside French, never in place of it. A function that gained a `language`
 parameter defaults it to French, which is also how a forgotten argument would pass unnoticed:
 `tests/unit/test_language_is_passed.py` walks the call sites of the application and fails on
 one that does not name the language.
@@ -55,7 +55,7 @@ offered in has no required file.
 
 ## Per-language tables
 
-Every table that depends on the language is declared with `by_language(fr=…, en=…, nl=…)`
+Every table that depends on the language is declared with `by_language(fr=…, en=…, nl=…, de=…)`
 (`app/domain/language.py`), which raises at import unless it covers `COURSE_LANGUAGES`. The table
 sits in the module that uses it; there is no central lexicon.
 `tests/unit/test_by_language_tables.py` adds a language in a fresh interpreter and imports every
@@ -63,17 +63,19 @@ module that declares a table: each must refuse.
 
 | Table | Module | What it holds |
 |---|---|---|
-| `WORDS` | `services/curriculum_render.py` | the overview, brief, completion and state sentences, day and month names, time of day |
+| `WORDS`, `REPRISE`, `REVISION`, `_DATE` | `services/curriculum_render.py` | the overview, brief, completion and state sentences, day and month names, time of day; the reprise note; the révision's overview, state and outcome words; a self-assessment's date (« 12. November » in German) |
 | `KIND_LABELS` | `domain/curriculum.py` | `cours / exercices / synthèse` — `lesson / practice / summary` |
 | `WORDS` | `services/path.py` | the path refusals |
-| `SAVE_FAILED`, `_UNKNOWN`, `_OUTPUT`, `_WORDS` | `tools/context.py`, `section.py`, `pace.py`, `registry.py` | the other sentences a tool hands the model |
-| `CHARS_PER_TOKEN` | `services/history.py` | 3.2 / 4.0 / 3.4, so English or Dutch history is not trimmed as French |
+| `SAVE_FAILED`, `_UNKNOWN`, `_OUTPUT`, `_WORDS` | `tools/context.py`, `section.py`, `pace.py`, `registry.py`, `result.py` | the other sentences a tool hands the model |
+| `CHARS_PER_TOKEN` | `services/history.py` | 3.2 / 4.0 / 3.4 / 3.4, so English, Dutch or German history is not trimmed as French |
+| `_PHOTO_LABEL` | `services/work_reading.py` | the sentence that introduces a photo of the student's work |
+| `_LANGUAGE_NAMES_FR` | `domain/pack.py` | the language's French name, for the wrong-language reason the repair loop reads |
 | `MARKERS` | `domain/transcription.py` | `[manuscrit` … / `[handwritten` … / `[handgeschreven` …, the page-batch sentences |
 | `_NUMBERING_BY_LANGUAGE` | `domain/pack.py` | the chapter-numbering words `chapter_title` strips |
 | `AGENT_WORDS` | `services/authoring/words.py` | what the agent says around the material |
-| `PACK_WORDS_BY_LANGUAGE`, `COMMA`, `GROUPS` | `tools/plots.py` | which function the pack must name; the comma a pair uses; half-open intervals |
+| `PACK_WORDS_BY_LANGUAGE`, `COMMA`, `GROUPS`, `MEMBERS` | `tools/plots.py` | which function the pack must name; the comma a pair uses; half-open intervals; what separates a pair's or an interval's members (`;` everywhere, `;` or `|` in German) |
 | `HOLE_WORDS` | `tools/flowcharts.py` | the phrases that mark a box as a hole |
-| `INTERVAL`, `COORDS`, `DEGREES`, `LENGTH` | `tools/figures.py` | hand-written notation, and how a measure is read |
+| `INTERVAL`, `COORDS`, `NUMBER`, `DEGREES`, `LENGTH` | `tools/figures.py` | hand-written notation, how a number is read (German `12.500` is twelve thousand five hundred), and how a measure is read |
 
 The French constants (`PACK_WORDS`, `_COMMA`, `_INTERVAL`, …) keep their names and shapes, so the
 French tests that read them did not change.
@@ -100,6 +102,8 @@ notation or culture:
 - the voice block's spoken forms: « x squared », « u sub n », « two point five ».
 
 The Dutch files keep the same skeleton and are written in the Flemish register (« je » for the learner, `u` never, the glossary of the spec's Appendix A). Their notation is the one Belgian French uses — decimal comma, `]a ; b[`, `(2 ; −1,5)`, `12,5 %`, sequences from `u₁` — **held by reference**: `DUTCH` in `charts/format.ts` is `{...FRENCH, …}`, the `nl` rows of `notation_cases.json` repeat the French ones, and the Dutch prompt files say it in words. Changing the Flemish board's notation later is changing those three places (and the golden renders). The Dutch pack headings are « Doel van het hoofdstuk … Na te kijken punten » with the sentinels « Geen. » and « Niets in de cursus ». The copy and the prompts were written by us and await review by a Flemish speaker.
+
+The German files (spec 021) keep the same skeleton, address the learner with « du » and name no Bundesland. Their notation is the one of NRW Gymnasium material (counted in Klett's *Lambacher Schweizer* NRW books): decimal comma, `1000` and `10 000`, `12,5 %`, intervals `[a ; b]`, `]a ; b[`, points **`P(2 | −1,5)`** (in LaTeX `P(2 \mid -1{,}5)`). Unlike Dutch it is **not** held by reference: `GERMAN` in `charts/format.ts` is an explicit object that names the French functions where the forms agree and has its own `pair`; the backend has its own `*_DE` rows. The German transcription separates uncertain readings with « oder » (`[unsicher: P(2 | 3) oder P(2 | 8)]`), since the bar is the point's separator; no code reads inside the mark. The German pack headings are « Ziel des Kapitels … Zu prüfende Punkte » with the sentinels « Keine. », « Nichts im Material. », « im Material nicht korrigiert ». The copy and the prompts were written by us and await the user's review.
 
 The English system text has its own pins (`system_text_sha_en.txt`,
 `system_text_sha_en_discussion.txt`, and `_nl` twins) and its own cached prefix per chapter and mode. A chapter has
@@ -132,7 +136,7 @@ and the model; the model answers in the course's language).
 ## The board
 
 `frontend/src/components/celestin/charts/format.ts` holds the notations: `FRENCH` (the original
-functions, by reference), `ENGLISH` and `DUTCH` (the French notation plus the Dutch measure and box-plot words), chosen by `notationFor(language)` and read in the views with
+functions, by reference), `ENGLISH`, `DUTCH` (the French notation plus the Dutch measure and box-plot words) and `GERMAN` (explicit: the French number, interval and percentage forms, points with a bar, German words), chosen by `notationFor(language)` and read in the views with
 `useNotation()`. The pure layout helpers take a `notation` parameter that defaults to French.
 `backend/tests/fixtures/notation_cases.json` ↔
 `frontend/src/components/celestin/charts/__tests__/notation_cases.json` is the shared table: the
@@ -147,7 +151,7 @@ transcription marks the source editor names, and the notation.
 
 ## Adding things
 
-- **A language** (say `de`). Dutch was the first one added after the table machinery existed, and this is what it
+- **A language** (say `it`). Dutch was the first one added after the table machinery existed and German the second; this is what they
   needed, in the order that kept every step green:
   1. The types: `CourseLanguage` and `COURSE_LANGUAGES` (`domain/language.py`), the frontend type
      (`lib/course-language.tsx`). Every `by_language` table now fails at import until it has a row; add the rows
@@ -164,9 +168,16 @@ transcription marks the source editor names, and the notation.
      `HOLE_WORDS`, the notation rows in the shared table and the frontend `notationFor`.
   4. The scripts: `probe_tables` (the probe vocabulary is allowed to be missing until its fixtures exist),
      `chapter_files`, `seed`, `smoke`, `voice_probe` and `--language` choices; `evals/`'s `LANGUAGES`.
-  5. Only then `SubjectInfo.languages` gains the code, and the pinned lists (`test_language`,
+  5. Only then `subject.OFFERED` gains the code, and the pinned lists (`test_language`,
      `test_subjects`, `test_courses_endpoint`, the frontend create-form fixtures) move together. Until
      then a test that needs the language asks for it by patching `SUBJECTS`.
+  German taught three more lessons. First, the tests used `de` as their example of an *unsupported* code: before a
+  code joins a `Literal`, move every such case to another code (`es`, `xx`). Second, a language whose notation
+  writes a pair with another sign than `;` or `,` needs a `MEMBERS` row, not only a `COORDS` one, or a pair on an
+  open exercise's label is not seen as one (`plots._gives_values`); LaTeX spellings of that sign (`\mid`) are
+  undone before the rules read. Third, hand-written language lists outside `app/` (`scripts/probe._LEAK`,
+  `evals/harness/config.LANGUAGES`, `judge.LANGUAGE_NAMES`) are tables or guarded by a test
+  (`evals/tests/unit/test_languages_match_backend.py`), so a missing row fails before a run.
   The interface side is separate ([i18n.md](./i18n.md), « Another language »): a course language does not need an
   interface language, nor the other way round. No component names a language.
 - **A subject in a language**: its `subjects/<subject>.{lang}.md` and `templates/<subject>.pack.{lang}.md`,
@@ -177,10 +188,10 @@ transcription marks the source editor names, and the notation.
 ## Probes and checks
 
 `scripts.seed`, `smoke`, `voice_smoke`, `voice_probe`, `authoring_eval`, `document_eval` and
-`probe` take `--language en` or `--language nl`. They call the real API and cost money: run them deliberately, read the
-transcripts, and record what they show in `specs/011-course-language/tasks.md`. The English and Dutch probe
+`probe` take `--language en`, `--language nl` or `--language de`. They call the real API and cost money: run them deliberately, read the
+transcripts, and record what they show in `specs/011-course-language/tasks.md`. The English, Dutch and German probe
 sets report three numbers per run: the answer-leak rate (target below 1 % of tutor messages), the
-formulas or methods outside the pack (target zero), and the count of French (or English) in a Dutch or English course's
+formulas or methods outside the pack (target zero), and the count of French (or English, or Dutch) in a course of another language's
 speech or cards (target zero; one is a failure to read, not to ignore).
 
 ## Known limits
@@ -189,8 +200,9 @@ speech or cards (target zero; one is a failure to read, not to ignore).
   is followed by Célestin's text, not by the board's formatter.
 - Material in another language than the course's is not detected, only a pack with the wrong
   template.
-- The refusals the rules return, about 150 messages, are French in an English or a Dutch course.
+- The refusals the rules return, about 150 messages, are French in an English, a Dutch or a German course.
 - Only Flemish conventions are offered: there is no `nl-NL` (Netherlands) variant, and `nl-NL` browsers read Dutch with the Flemish board.
 - The Flemish board writes the Belgian-French notation (a choice of spec 017, easy to change: see « The prompt set »); a Flemish school that writes `(2, −1,5)` or `[a, b[` is followed by Célestin's text, not by the formatter.
-- The English and Dutch prompts, render goldens and pins were written by us and have been read, not
-  measured, until the probe runs are made and their transcripts read. The Dutch ones are awaiting review by a Flemish speaker.
+- Only Germany's conventions are offered (NRW Gymnasium forms): `de-AT` and `de-CH` browsers read German with that board; a school that writes `(2; 3)` or `12.500` is followed by Célestin's text and recognised by the rules, not written by the formatter.
+- The English, Dutch and German prompts, render goldens and pins were written by us and have been read, not
+  measured, until the probe runs are made and their transcripts read. The Dutch ones are awaiting review by a Flemish speaker, the German ones the user's review.
