@@ -13,8 +13,8 @@ describe("the server strategy", () => {
   it.each([
     ["en-GB", "en"],
     ["fr-BE,fr;q=0.9", "fr"],
-    ["de,en;q=0.5", "en"],
-    ["de-DE", "fr"],
+    ["es,en;q=0.5", "en"],
+    ["es-ES", "fr"],
     ["en; q=0.8, fr", "fr"],
   ])("Accept-Language %s gives %s", async (header, expected) => {
     expect(await extractLocaleFromRequestAsync(request(header))).toBe(expected);

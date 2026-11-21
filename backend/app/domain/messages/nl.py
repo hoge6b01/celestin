@@ -131,6 +131,7 @@ MESSAGES: dict[str, str] = {
     "language.fr": "Frans",
     "language.en": "Engels",
     "language.nl": "Nederlands",
+    "language.de": "Duits",
     "issue.pack.title_missing": "het document moet beginnen met een titel “# Titel van het hoofdstuk”",
     "issue.pack.title_too_long": "de titel is langer dan {max} tekens",
     "issue.pack.title_multiple": "het document mag maar één titel van niveau 1 hebben",

@@ -11,6 +11,7 @@ import pytest
 from app.domain import messages
 from app.domain.locale import LOCALES
 from app.domain.messages import CATALOGS, plural_category, render
+from app.domain.messages.de import MESSAGES as DE
 from app.domain.messages.en import MESSAGES as EN
 from app.domain.messages.fr import MESSAGES as FR
 from app.domain.messages.nl import MESSAGES as NL
@@ -30,9 +31,20 @@ def test_the_dutch_catalog_has_the_same_keys() -> None:
     assert set(CATALOGS) == set(LOCALES)
 
 
+def test_the_german_catalog_has_the_same_keys() -> None:
+    """Spec 021 R1.2: every key the French catalog holds, and none more."""
+    assert set(FR) == set(DE), sorted(set(FR) ^ set(DE))
+
+
+def test_the_german_catalog_says_du() -> None:
+    """Spec 021 R1.10: every user is addressed with « du », administrators included."""
+    formal = [key for key, text in DE.items() if re.search(r"\b(?:Sie|Ihr|Ihre|Ihnen|Ihren|Ihrem)\b", text)]
+    assert formal == [], formal
+
+
 @pytest.mark.parametrize("key", sorted(FR))
 def test_each_message_takes_the_same_parameters_in_every_language(key: str) -> None:
-    assert fields(FR[key]) == fields(EN[key]) == fields(NL[key]), key
+    assert fields(FR[key]) == fields(EN[key]) == fields(NL[key]) == fields(DE[key]), key
 
 
 def test_every_plural_has_both_forms() -> None:
@@ -56,6 +68,11 @@ def test_no_message_is_empty_or_untranslated() -> None:
     assert untranslated == [], untranslated
     for key, text in NL.items():
         assert text.strip(), key
+    # Nor the German one any other language left in place.
+    untranslated = [key for key in FR if DE[key] in (FR[key], EN[key], NL[key]) and words(DE[key])]
+    assert untranslated == [], untranslated
+    for key, text in DE.items():
+        assert text.strip(), key
 
 
 @pytest.mark.parametrize(
@@ -64,6 +81,7 @@ def test_no_message_is_empty_or_untranslated() -> None:
         ("fr", 0, "one"), ("fr", 1, "one"), ("fr", 2, "other"),
         ("en", 0, "other"), ("en", 1, "one"), ("en", 2, "other"),
         ("nl", 0, "other"), ("nl", 1, "one"), ("nl", 2, "other"),
+        ("de", 0, "other"), ("de", 1, "one"), ("de", 2, "other"),
     ],
 )
 def test_plural_categories(locale: str, count: int, expected: str) -> None:
@@ -78,6 +96,7 @@ def test_render_fills_parameters_and_picks_the_plural() -> None:
     assert render("authoring_busy", "fr", limit=3, count=3).startswith("3 chapitres")
     assert render("authoring_busy", "nl", limit=1, count=1).startswith("Er wordt al een hoofdstuk")
     assert render("authoring_busy", "nl", limit=3, count=3).startswith("Er worden al 3 hoofdstukken")
+    assert "3" in render("authoring_busy", "de", limit=3, count=3) and render("authoring_busy", "de", limit=1, count=1)
     assert render("source_length", "nl", minimum=3, maximum=9) == "De tekst moet tussen 3 en 9 tekens lang zijn."
 
 

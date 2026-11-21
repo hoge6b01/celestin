@@ -198,9 +198,10 @@
     font-size: 1.05em;
   }
 
-  /* Dutch compounds are long (« studieoriëntatiebegeleiding »): let them hyphenate and, as a last resort,
-     break, so a button or a card at 400 px never overflows (spec 017 NFR 4.5.3). */
-  :lang(nl) {
+  /* Dutch and German compounds are long (« studieoriëntatiebegeleiding », « Häufigkeitsverteilung »): let them
+     hyphenate and, as a last resort, break, so a button or a card at 400 px never overflows (specs 017, 021). */
+  :lang(nl),
+  :lang(de) {
     hyphens: auto;
     overflow-wrap: break-word;
   }

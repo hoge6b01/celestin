@@ -141,3 +141,24 @@ async def test_the_account_language_wins_over_the_browser_for_dutch_too(client) 
     await client.patch("/api/auth/me", json={"locale": "nl"})
     missing = await client.get("/api/courses/" + "ab" * 16, headers=FR_HEADER)
     assert missing.status_code == 404 and missing.json()["message"] == "Deze pagina bestaat niet."
+
+
+DE = {"accept-language": "de-DE,de;q=0.9"}
+
+
+async def test_an_error_reaches_a_german_visitor_in_german(anon_client) -> None:
+    """Spec 021 R1.3, R1.7."""
+    r = await anon_client.get("/api/auth/me", headers=DE)
+    assert r.status_code == 401 and r.json() == {"code": "not_authenticated", "message": "Melde dich an, um weiterzumachen."}
+    bad = await anon_client.post(
+        "/api/auth/login",
+        json={"email": "nobody@example.de", "password": "wrong-password"},
+        headers={**DE, "sec-fetch-site": "same-origin"},
+    )
+    assert bad.json() == {"code": "invalid_credentials", "message": "E-Mail oder Passwort ist falsch."}
+
+
+async def test_the_account_language_wins_over_the_browser_for_german_too(client) -> None:
+    await client.patch("/api/auth/me", json={"locale": "de"})
+    missing = await client.get("/api/courses/" + "ab" * 16, headers=FR_HEADER)
+    assert missing.status_code == 404 and missing.json()["message"] == "Diese Seite gibt es nicht."

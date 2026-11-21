@@ -187,7 +187,7 @@ async def test_register_stores_the_language_the_visitor_was_reading(anon_client:
     unsupported = await anon_client.post(
         "/api/auth/register",
         json={**REGISTER, "email": "jan@example.be"},
-        headers={**SAME_ORIGIN, "accept-language": "de-DE,de;q=0.9"},
+        headers={**SAME_ORIGIN, "accept-language": "es-ES,es;q=0.9"},
     )
     assert unsupported.json()["user"]["locale"] == "fr"
     anon_client.cookies.clear()
@@ -197,6 +197,13 @@ async def test_register_stores_the_language_the_visitor_was_reading(anon_client:
         headers={**SAME_ORIGIN, "accept-language": "nl-BE,nl;q=0.9,fr;q=0.5"},
     )
     assert flemish.json()["user"]["locale"] == "nl"
+    anon_client.cookies.clear()
+    german = await anon_client.post(  # spec 021 R1.3
+        "/api/auth/register",
+        json={**REGISTER, "email": "jana@example.de"},
+        headers={**SAME_ORIGIN, "accept-language": "de-DE,de;q=0.9,en;q=0.5"},
+    )
+    assert german.json()["user"]["locale"] == "de"
 
 
 async def test_sign_in_and_me_return_the_stored_language(anon_client: AsyncClient) -> None:
@@ -222,6 +229,8 @@ async def test_patch_me_changes_the_language(client: AsyncClient) -> None:
     assert (await client.get("/api/auth/me")).json()["user"]["locale"] == "en"
     r = await client.patch("/api/auth/me", json={"locale": "nl"})
     assert r.status_code == 200 and r.json()["user"]["locale"] == "nl"
+    r = await client.patch("/api/auth/me", json={"locale": "de"})
+    assert r.status_code == 200 and r.json()["user"]["locale"] == "de"
     r = await client.patch("/api/auth/me", json={"locale": "fr"})
     assert r.json()["user"]["locale"] == "fr"
 
@@ -232,7 +241,7 @@ async def test_patch_me_with_nothing_changes_nothing(client: AsyncClient) -> Non
 
 
 async def test_patch_me_refuses_what_it_does_not_know(client: AsyncClient) -> None:
-    unsupported = await client.patch("/api/auth/me", json={"locale": "de"})
+    unsupported = await client.patch("/api/auth/me", json={"locale": "es"})
     assert unsupported.status_code == 422
     # Nor can a body name another account or another field.
     other = await client.patch("/api/auth/me", json={"locale": "en", "id": "someone-else"})

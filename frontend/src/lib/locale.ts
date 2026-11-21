@@ -3,12 +3,17 @@
  *  Its twin is `backend/app/domain/locale.py`; `__tests__/accept_language_cases.json`
  *  is the case table both read. */
 
-export const LOCALES = ["fr", "en", "nl"] as const;
+export const LOCALES = ["fr", "en", "nl", "de"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "fr";
 
 /** Each language in its own words: the settings list is not translated. */
-export const AUTONYM: Record<Locale, string> = { fr: "Français", en: "English", nl: "Nederlands" };
+export const AUTONYM: Record<Locale, string> = {
+  fr: "Français",
+  en: "English",
+  nl: "Nederlands",
+  de: "Deutsch",
+};
 
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (LOCALES as readonly string[]).includes(value);

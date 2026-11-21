@@ -23,12 +23,12 @@ def test_the_account_wins_over_the_header() -> None:
 
 def test_the_header_is_read_when_nobody_is_signed_in() -> None:
     assert locale_of(_request("en-GB")) == "en"
-    assert locale_of(_request("de-DE")) == "fr"
+    assert locale_of(_request("es-ES")) == "fr"
     assert locale_of(_request()) == "fr"
 
 
 def test_a_bad_state_value_is_ignored() -> None:
-    assert locale_of(_request("en", state_locale="de")) == "en"
+    assert locale_of(_request("en", state_locale="es")) == "en"
 
 
 def test_current_user_leaves_the_language_on_the_request(repos, settings) -> None:
@@ -54,5 +54,5 @@ def test_the_scope_reader_serves_the_asgi_middleware() -> None:
 
     assert locale_of_scope({"headers": [(b"accept-language", b"en-GB,en;q=0.9")]}) == "en"
     assert locale_of_scope({"headers": [(b"accept-language", b"nl-BE")]}) == "nl"
-    assert locale_of_scope({"headers": [(b"accept-language", b"de")]}) == "fr"
+    assert locale_of_scope({"headers": [(b"accept-language", b"es")]}) == "fr"
     assert locale_of_scope({"headers": [(b"host", b"x")]}) == "fr"
