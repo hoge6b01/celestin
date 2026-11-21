@@ -23,6 +23,7 @@ __pycache__/
 
 # SQLite database (spec 004)
 backend/data/
+/data/
 
 # Authoring eval output (spec 005)
 backend/.eval/

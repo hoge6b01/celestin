@@ -4,6 +4,7 @@
 **/.env.*
 !**/.env.example
 backend/data
+data
 backend/.eval
 backend/.venv
 backend/.pytest_cache
