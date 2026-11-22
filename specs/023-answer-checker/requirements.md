@@ -53,7 +53,7 @@ Variants settled by code (§1.2) carry the rest of the practice.
 | `mapping` | pairs (« Ordne zu »: `A–2, B–1`) | same pairs |
 
 Every kind reads the student's text in the **course's** notation (`by_language` tables): decimal
-comma or point, thousands grouping, `]a ; b[` or `(a, b)`, `P(2 | −1,5)` or `(2, −1.5)`, `%`.
+comma or point, thousands grouping, `]a; b[` or `(a, b)`, `P(2 | −1,5)` or `(2, −1.5)`, `%`.
 Fractions and decimals of the same value are equal (`3/4` = `0,75`) unless the exercise asks for
 a form (§8.3). An answer may carry `≈`, « rund » or « ca. » before it.
 
@@ -137,8 +137,9 @@ spec 022 share the same verdicts.
    rounding rule; for `expression` with a required form, `form_unchecked` (value right, form not
    checked, §8.3); or **not reliably checkable** when the code cannot settle the answer (§7.5). Every verdict names its **basis**: the material's solution, a computation, or
    both (§7.3).
-2. Exact arithmetic: numbers read from keys and answers are exact rationals; unit conversions are
-   exact; floating point is used only where a rounding rule is stated.
+2. Exact arithmetic: supported rationals and exact surds are compared exactly; unit conversions
+   are exact. Approximate computations may produce a verdict only with certified rounding and
+   completeness where applicable (§9).
 3. No model call, no I/O, no randomness.
 4. Imports no SDK and no catalog; text it returns to the model is in the course language, text for
    the student goes through the catalog (spec 010).
@@ -165,8 +166,9 @@ verdict is about that exercise and nothing else.
 2. `check_answer` takes the student's final answer and the recorded exercise's id (plus for
    révision the chapter and section). It checks against that recorded exercise only; the verdict
    belongs to that exercise and is shown on its card, wherever it is in the séance.
-3. **The answer is the student's**: the tool refuses (tool error the model reads) an answer that
-   is not found, after normalising spaces, in the latest learner message.
+3. **The answer is the student's**: the checker accepts only an unambiguously delimited answer
+   associated with the bound exercise. If uncertain, ask the learner; a substring match alone is
+   insufficient (§9). This applies to text, selections and voice.
 4. An unknown or uncheckable exercise id, an exercise marked as needing review (§7.4), or an
    answer the code cannot settle (§7.5) gives no correct/incorrect verdict: the tool tells Célestin
    to guide without one.
@@ -313,8 +315,9 @@ not stored in the repository (findings summarised here, no excerpts).
    counts as a stated rounding rule, at the solution's own decimals: an answer that rounds to it
    at those decimals is correct (more decimals allowed); fewer decimals is `precision`. A rule in
    a note that governs the exercise (« Runde immer auf zwei Nachkommastellen, wenn nichts anderes
-   angegeben ist »), and « Runde sinnvoll », count as stated. Rounding to tens, hundreds or
-   thousands is a rule too. Without any of these, §7.1 holds: exact. (About 45 % of the solutions
+   angegeben ist ») counts as stated. « Runde sinnvoll » alone is not a concrete rule: if the
+   material and marked solution do not establish one unambiguously, do not grade the rounding
+   (§9). Rounding to tens, hundreds or thousands is a rule too. Without any of these, §7.1 holds: exact. (About 45 % of the solutions
    in the grade 9 chapters on similarity and circles are rounded with no rule in the task.)
 2. **Exact roots are numbers.** `2√2`, `(3 + √2) cm`, `x₁ = −3 + √2`, `L = {1 − √7; 1 + √7}` are read
    and compared exactly; an equation whose solutions are of that form is checkable without a
@@ -333,3 +336,24 @@ not stored in the repository (findings summarised here, no excerpts).
    `mapping`; « richtig oder falsch? Begründe »: only the choice is checked, the reason is not.
 7. **Equations**: besides polynomials of degree ≤ 4, equations with the variable in a denominator
    (`24/x = 3`, Strahlensätze) and pure powers (`x⁵ = 1024`, `x⁻² = 1/9`) are solved by code.
+
+## 9. Follow-up review decisions
+
+The user agreed to the decisions recorded in `specs/023-review-followup.md`. They refine §§7–8:
+
+1. Different or not reliably established expression domains give no equivalence verdict; the
+   relevant exercise domain and preserved exclusions must be specified.
+2. The learner's answer must be unambiguously delimited and bound to the exercise; ask when
+   uncertain. A substring match is insufficient, including for text, selections and voice.
+3. Computed solutions yield a verdict only when all relevant solutions and any rounding can be
+   established reliably; otherwise return not reliably checkable.
+4. Old multiple-choice cards retain the question and any recorded selection, but no unverified
+   correctness mark or model-authored automatic feedback. A checker verdict shows its source.
+5. Exercises explicitly labelled as review retain the label so the revision overview can show
+   them separately. Do not infer a label where the material is ambiguous.
+6. A vague rounding instruction without an unambiguous rule gives no rounding verdict.
+7. A variant is checked only if the displayed task and its checking data reliably agree; merely
+   adding a computed task line next to unverified model text does not establish agreement.
+
+Implementation details and verification evidence for these decisions need design review before
+planning; the contract with spec 022 is deferred until that spec is resumed.

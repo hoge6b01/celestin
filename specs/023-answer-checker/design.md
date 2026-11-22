@@ -34,9 +34,9 @@ Four pieces, all deterministic, no model call:
 Kept from the first design:
 
 - **D1. The key never appears in a tool output**, not even after a correct answer or a reveal.
-- **D3. Equations and inequalities are solved only as polynomials** in one variable of degree
-  1–4. Rational roots are found exactly; an irrational root is checkable only when the task states
-  a rounding rule (§7.1 of the requirements: exact by default).
+- **D3. Equation classes** include one-variable polynomials of degree 1–4; D12 and D15 add exact
+  surds, rational equations and pure powers. Verdicts require established completeness and
+  unambiguous rounding (§9); the verification method remains for design review.
 - **D4. One variable** per expression, relation or task.
 
 Superseded: **D2** (« `check_question` unchanged ») → requirements §7.6, implemented by D9.
@@ -46,9 +46,10 @@ New, from the review decisions:
 - **D5. Binding through the board.** `ExerciseCard` and `CheckQuestionCard` gain an optional
   `check`. For a pack reference, the server **replaces the card's statement with the pack's
   statement of that exercise** (the block under its heading, cut before its answer and key lines);
-  if it cannot cut it reliably, the card is shown unbound. For a variant, the server **adds the task
-  as it parsed it** under the statement (« Aufgabe: x² − 5x + 6 = 0 lösen », plus the rounding rule
-  if any); that line is the checked task. The board declarations change (pins regenerated).
+  if it cannot cut it reliably, the card is shown unbound. For a variant, the displayed task and
+  checking data must reliably agree; a generated task line beside unverified model text is not
+  sufficient. The server may generate a purely mathematical statement from checking data. The
+  allowed context and binding method need design review. The board declarations change.
 - **D6. `exercise_id` is a short HMAC** over the checking data (user, chapter, content version,
   pack reference or canonical task). Text turns resolve it from the séance's stored entries; voice
   turns get the bound checking data back from the browser and verify it against the id, so no
@@ -59,9 +60,10 @@ New, from the review decisions:
   stored solution untouched. Agreement is evidence, not proof, that the task was copied right: two
   independent lines of the material agree.
 - **D8. Expression classes**: polynomials and rational expressions with rational coefficients in
-  one variable, compared exactly (`n₁·d₂ = n₂·d₁` as polynomials). Rational expressions count as
-  equal on their common domain (`(x²−1)/(x−1)` = `x+1`). Anything else (roots, powers with a
-  non-integer exponent, functions) is « not reliably checkable ». Sample points are gone.
+  one variable, compared exactly (`n₁·d₂ = n₂·d₁` as polynomials) only after the relevant domains
+  are established to be the same. Different or uncertain domains yield no equivalence verdict;
+  original exclusions must survive simplification. The domain proof method needs design review.
+  Unsupported expressions are « not reliably checkable ». Sample points are gone.
 - **D9. Multiple choice**: `CheckQuestionCard` loses `correct_option_id` and `feedback`. Unbound, a
   pick is sent as today and shows no verdict. Bound (`check.exercise` to a `choice` key), the
   question is the pack's statement and the buttons are the key's option ids; the verdict comes
@@ -70,8 +72,9 @@ New, from the review decisions:
   the section outcome logic of spec 020 are untouched.
 - **D11. Rounding rule semantics** (revised after the textbook check, requirements §8.1): a key
   is `exact`, `±t`, `round d` (d may be negative: −1 tens, −2 hundreds) or `approx` (the material
-  wrote `≈`, « rund », « ca. », or a governing note or « Runde sinnvoll » applies; `d` = the key's
-  own decimals). Under `round d` / `approx`: `correct` iff the answer, rounded to `d` (half away from
+  wrote `≈`, « rund », « ca. », or a concrete governing rule applies; `d` = the marked key's
+  own decimals). A vague « Runde sinnvoll » without an unambiguous rule gives no rounding verdict.
+  Under `round d` / `approx`: `correct` iff the answer, rounded to `d` (half away from
   zero, exact arithmetic), equals the key and has at least `d` decimals; `precision` iff it has
   fewer decimals and the key rounded to the answer's decimals equals it; else `incorrect`. With
   `±t`: `correct` iff `|a − k| ≤ t`. `exact`: equality only.
@@ -194,7 +197,7 @@ a student's answer. Each returns a value or `None` (unreadable). Every number is
 | --- | --- | --- |
 | number | `374`, `12,5`, `12.500`, `10 000`, `3/4`, `2 1/4`, `0,1̄` / `0,\overline{1}`, `−2`, `12,5 %`, `25 m/s`, `x = 3`, `2√2`, `(3 + √2) cm`, `1,15 · 10⁴` / `1,15 · 10^4`, `4 Rest 7`, « nicht definiert » | `NUMBER[lang]`; space grouping only for groups of exactly three digits, so `2 1/4` is a mixed number; trailing unit via `units.py`; leading `<name> =` stripped; the written form kept for D13 |
 | expression | `2(x+1)`, `2x+2`, `f(x) = x^2` | `expression.parse(src, frozenset({variable}))`, then `algebra.py`; leading `f(x) =`/`y =` stripped; decimal comma → point in comma languages (`1,5x`) |
-| interval | `]2 ; 5]`, `[3; 4]`, `]−∞ ; 3[ ∪ ]4 ; +∞[`, `x > 2` (one-sided only), `L = ]2 ; 5]` | `[−∞ …` refused (∞ never closed); `∞`, `inf`, `unendlich` |
+| interval | `]2; 5]`, `[3; 4]`, `]−∞; 3[ ∪ ]4; +∞[`, `x > 2` (one-sided only), `L = ]2; 5]` | `[−∞ …` refused (∞ never closed); `∞`, `inf`, `unendlich` |
 | set | `{−1; 3}`, `L = {−1; 3}`, `L = {1 − √7; 1 + √7}`, `x = −1 oder x = 3`, `x₁ = −1; x₂ = 3`, `x₁ = −1,5, x₂ = 0,5` (anchored on the indexed names), `x = ±3`, `{}` / `∅` / `L = { }`, « keine Lösung », `L = ℝ` | `SET_SEPARATOR[lang]`, `JOINERS[lang]` (de `oder`/`und`; fr `ou`/`et`; nl `of`/`en`; en `or`/`and`), `NO_SOLUTION[lang]` |
 | point | `P(2 \| −1,5)`, `(2 \| −1,5)`, `(2; −1,5)` (de); `(2, −1.5)` (en) | `COORDS[lang]` plus a value reader; leading name stripped |
 | word | any text | NFKC, casefold, collapse spaces; accents stripped unless the key says `accents` |
@@ -231,11 +234,12 @@ def check(key: Key, answer: str, language: CourseLanguage, basis: Basis) -> Chec
 
 - **number**: read; units (3.4); then the rule (D11); a right value whose unit or written form
   differs from a required `form` is `form_differs` (D13); `remainder` keys compare both parts.
-  Surds compare exactly; under `round`/`approx` a surd answer is evaluated to float only for the
-  rounding test.
+  Surds compare exactly; rounding an approximate value requires a certified unambiguous result
+  (§9), otherwise it is not reliably checkable.
 - **expression**: both to `RationalFunction` (3.6); either outside the class → `undecided`
-  (`expression_class`); else `n₁·d₂ == n₂·d₁` → correct (`form_unchecked` when the key has a
-  form), else incorrect.
+  (`expression_class`); then establish equal domains before comparing `n₁·d₂` and `n₂·d₁`.
+  Different or uncertain domains → `undecided`; otherwise equal → correct (`form_unchecked`
+  when required), unequal → incorrect. Preserve exclusions before cancellation.
 - **interval**: unions normalised (sorted, merged); bounds compared under the rule (exact by
   default), closedness equal.
 - **set**: same size, pairwise equal under the rule; duplicates in the answer ignored.
@@ -261,7 +265,9 @@ Never raises on student input (fuzz test).
   divisors (coefficients ≤ 10⁶ in absolute value, else `None`), deflation by each rational root; a
   remaining quadratic factor gives two surds exactly (`(−b ± √D)/2a`, `D` reduced to `k²·c`); a
   remaining factor of degree 3–4 without rational roots: Durand–Kerner then Newton polish,
-  imaginary parts `< 1e−9` dropped, each root verified by sign change. No numpy.
+  numerical roots may be candidates only: a sign change or tolerance alone does not establish
+  completeness or unambiguous rounding, particularly for repeated roots. A certified method is
+  required before a verdict; otherwise return `NotCheckable`. The method needs design review.
 - `Surd` arithmetic: `+`, `−`, `×` by rational, comparison (exact, by squaring with signs),
   `float()`; parsing `√n` reduces `n` to `k²·c`.
 
@@ -280,7 +286,8 @@ def task_text(task: Task, rule: Rule, language) -> str    # the line the card sh
 
 - `Evaluate`: `to_rational` and `at` exact → `NumberKey` exact. Outside the class (e.g. `√`) →
   only with `round d`: `expression.evaluate` in float, the key is the value rounded to `d`
-  decimals; if the value is within `1e−9` of a rounding boundary → `NotCheckable("boundary")`.
+  decimals only if the numerical method certifies the rounding; a fixed distance threshold is
+  insufficient by itself. Otherwise → `NotCheckable("boundary")`.
   Division by zero → `NotCheckable("undefined")`.
 - `Solve`: split on the single top-level relational operator; `left − right` as a
   `RationalFunction` `n/d`:
@@ -319,7 +326,7 @@ Line form, under an exercise's `#### N.M.K` heading, after its answer line:
 - `<task>`: `solve <relation>` or `eval <expression> at <variable> = <value>`, copied from the
   statement; optional.
 - Examples (de): `**Schlüssel:** number 374` · `**Schlüssel:** number 25 m/s` ·
-  `**Schlüssel:** number 3,14 round 2` · `**Schlüssel a):** interval ]2 ; 5]` ·
+  `**Schlüssel:** number 3,14 round 2` · `**Schlüssel a):** interval ]2; 5]` ·
   `**Schlüssel b):** set {2; 3} | solve x^2 - 5x + 6 = 0` · `**Schlüssel:** point P(2 | −1,5)` ·
   `**Schlüssel:** expression x 2(x+1)` · `**Schlüssel:** word Hypotenuse` ·
   `**Schlüssel:** choice B of A B C D` · `**Schlüssel c):** number ≈ 3,84 cm` ·
@@ -361,7 +368,7 @@ class TaskArgs(BaseModel):
     evaluate: Annotated[str, Field(max_length=120)] | None
     at: Annotated[str, Field(max_length=24)] | None
     variable: Annotated[str, Field(pattern=r"^[a-z]$")]
-    round: Annotated[int, Field(ge=0, le=6)] | None
+    round: Annotated[int, Field(ge=-3, le=6)] | None
 ```
 
 `display_board` runs `bind(card, ctx)` for each card with `check`:
@@ -370,8 +377,8 @@ class TaskArgs(BaseModel):
 2. Pack: the ref is in the chapter's keys (révision: of the section's chapter); the statement cuts
    (`exercise_statement`); for `check_question` the key is `choice`. Variant: `task_key` succeeds.
 3. On success the server rewrites the card: pack → `statement` (or `question`) := the pack's
-   statement; `check_question` options := the key's ids (text = id); variant → a `task` line is set
-   to `task_text`. Then `exercise_id := "x" + hex(HMAC_SHA256(k, canonical))[:10]`, where
+   statement; `check_question` options := the key's ids (text = id); variant → bind only when
+   the displayed statement and checking data reliably agree (D5). Then `exercise_id := "x" + hex(HMAC_SHA256(k, canonical))[:10]`, where
    `canonical` is JSON of (user id, chapter id, content version, ref or task, rule) and `k` is
    derived from `SESSION_SECRET` (`hkdf`, label `celestin-exercise-v1`). The card carries
    `exercise_id`, `bound: {exercise | task}`, `status: material | agrees | needs_review |
@@ -399,8 +406,9 @@ regenerated deliberately.
 - Voice: `VoiceToolRequest` gains `learner_text: str ≤ 2000 = ""` (latest user transcript) and
   `bound: list[BoundExercise] ≤ 20` (what the browser's board holds); `/api/voice/tool` verifies
   each against its id (recomputed HMAC) and drops the others.
-- `answers/normalise.py: contains(learner_text, answer) -> bool`: both normalised (3.3), spaces
-  removed, casefolded; substring test.
+- The answer must be an unambiguously delimited learner submission associated with the bound
+  exercise; substring matching is insufficient. Ambiguity leads to a clarification, not a verdict.
+  The precise text, choice and voice contracts need design review.
 
 ### 3.11 The tool: `app/services/tools/check.py`
 
@@ -427,7 +435,8 @@ class AnswerChecked:
 Order of checks (each refusal a `ToolValidationError` in the course language):
 
 1. révision: `chapter` and `section_id` present and valid (reuses `result.py`'s words);
-2. `ctx.learner_text` present and `contains(learner_text, answer)` (`not_the_students`);
+2. An unambiguous learner submission is associated with the exercise; otherwise ask for
+   clarification and issue no verdict (§9).
 3. `exercise_id` in `ctx.bound` (`unknown_exercise`: « Diese Aufgabe ist nicht gebunden: begleite
    ohne Urteil. »);
 4. status `needs_review` → no check: output « Keine Bewertung: Die Lösung im Material und die
@@ -616,7 +625,8 @@ Description (French, as all declarations): « Fais vérifier par le code la rép
 - No evaluation of model or student text: the expression grammar parser only; length caps
   everywhere (answer 200, task 120, voice `learner_text` 2000, `bound` 20).
 - The answer must come from the student's message; the exercise must be bound by the server (HMAC):
-  the model can neither check text the student did not write nor an exercise that was not shown.
+  the design must establish that the submission is the learner's and the bound exercise was shown;
+  a substring or a valid HMAC alone does not establish either guarantee.
 - The key never leaves the server in a tool output or a card; the pack's statement shown on a card
   is cut before its answer and key lines.
 - Routes unchanged except the `/api/voice/tool` body and the révision and pack DTOs.
@@ -630,22 +640,18 @@ Description (French, as all declarations): « Fais vérifier par le code la rép
 - Authoring: `keys`, `keys_dropped`, `keys_needs_review` on `authoring_stage`.
 - `exercise_result` log on write (ids, verdict, basis).
 
-## 10. Open questions for the owner
+## 10. Open design work
 
-1. **D8 domain rule**: count `(x²−1)/(x−1)` and `x+1` as equal (common domain, as a « vereinfache »
-   exercise expects), or refuse a verdict when the domains differ?
-2. **D9 old cards**: stored `check_question` cards replay without colour from now on (consistent),
-   or keep their old display as history?
-3. **D9 feedback**: the model's `feedback` text after a pick is removed (it could say « richtig »);
-   Célestin says it in speech instead. Acceptable?
-4. **Contract with spec 022**: proposed: 022 sets its items as bound exercises (3.9), checks them
-   with `check()` directly (no tool call), records them in `exercise_results` with the test's id,
-   and treats `undecided`, `form_unchecked` and unbound items as self-assessed. To be settled when
-   022 is designed.
-5. **Review pages** (« Dein Fundament », about half of a textbook's solved exercises, earlier
-   grades): mark them in the pack (a §6 group « Wiederholung ») so their results are listed apart
-   in the Bilan, or treat them like any exercise?
-6. **Figures (D14)**: no verdict for a figure-dependent exercise is the safe choice but leaves most
-   geometry unchecked. A later spec could bind such an exercise with a drawing the pack describes
-   (`[Abbildung: …]` made into a board drawing) once the drawing itself can be checked against the
-   material.
+The owner resolved domain equality, old choice-card replay and feedback, and explicit review-page
+labels in `specs/023-review-followup.md` and requirements §9. The following implementation
+contracts need design and review before planning:
+
+1. Preserve original expression domains, define the exercise domain, and establish domain equality
+   or return `undecided` without relying on cancellation or finite samples.
+2. Define unambiguous answer submission and exercise binding for text, choice and voice, including
+   clarification and replay. Verify variants' entire displayed context against their checking data.
+3. Specify certified solution completeness and rounding, including repeated and closely spaced
+   roots, failure limits, and when to return not reliably checkable.
+4. Represent explicit review labels and carry them to the revision overview without guessing.
+5. The contract with spec 022, including result storage and uncheckable items, is deferred until
+   that spec is resumed. Figure-dependent exercises remain unbound under D14.
