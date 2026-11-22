@@ -51,10 +51,10 @@ describe("the notation of each course language", () => {
     expect(GERMAN.number(10000).replace(/\s/g, " ")).toBe("10 000");
     expect(GERMAN.value(12.5, "pourcentage").replace(/\s/g, " ")).toBe("12,5 %");
     expect(GERMAN.pair(2, -1.5)).toBe("(2 | −1,5)");
-    expect(GERMAN.interval(2, 5, true, false)).toBe("[2 ; 5[");
-    expect(GERMAN.interval(null, 2, false, true)).toBe("]−∞ ; 2]");
+    expect(GERMAN.interval(2, 5, true, false)).toBe("[2; 5[");
+    expect(GERMAN.interval(null, 2, false, true)).toBe("]−∞; 2]");
     expect(GERMAN.measureName).toEqual({
-      effectif: "Absolute Häufigkeit",
+      effectif: "Häufigkeit",
       frequence: "Relative Häufigkeit",
       pourcentage: "Prozent",
     });

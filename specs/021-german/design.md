@@ -10,7 +10,7 @@ Decisions on the open points of the requirements (§5):
 
 | # | Question | Decision |
 |---|---|---|
-| 1 | German notation | NRW forms (requirements §5.1). Board: decimal comma; `1000`, `10 000` (the French `fr-BE` "min2" grouping, same output); `12,5 %`; intervals `[a ; b]`, `]a ; b[`, `[a ; b[`, `]a ; b]`, `]−∞ ; 2]` (French formatter, same spacing as Klett: `[0 ; 1]`); points `(2 \| −1,5)`; list separator ` ; `. Held in `GERMAN` (frontend, an explicit object, §5.2), the `*_DE` rule rows (backend, §4.6), `notation_cases.json` rows, and the German subject prompts. |
+| 1 | German notation | NRW forms (requirements §5.1). Board: decimal comma; `1000`, `10 000` (the French `fr-BE` "min2" grouping, same output); `12,5 %`; intervals `[a; b]`, `]a; b[`, `[a; b[`, `]a; b]`, `]−∞; 2]`, no space before the semicolon (own formatter; corrected after the textbook check, §5.1 addendum of the requirements); points `(2 \| −1,5)`; list separator `; `. Held in `GERMAN` (frontend, an explicit object, §5.2), the `*_DE` rule rows (backend, §4.6), `notation_cases.json` rows, and the German subject prompts. |
 | 2 | `\|` in `[unsicher: a \| b]` | No code reads inside the mark: `count_markers`, `handwritten_numbers`, `apply_uncertain` and `validate_batch` only look for the prefix (`MARKERS[...].uncertain`). The German mark separates readings with **« oder »**: `[unsicher: P(2 \| 3) oder P(2 \| 8)]`. Only the German transcription prompts and `MARKER_EXAMPLES.de` say it; a test pins that `apply_uncertain` and `count_markers` accept such a line. |
 | 3 | Register | « du » everywhere, administrators included. |
 | 4 | Declarations / refusals | As English and Dutch: `TOOL_TEXT["de"] = {}`, declarations byte-equal to the French ones, refusals stay French; flipped only by German probe evidence (a French refusal sentence echoed in a German course's speech or card). |
@@ -205,7 +205,7 @@ export const GERMAN: Notation = {
   bound: formatBound,
   interval: formatInterval,                               // [2 ; 5[, ]−∞ ; 2]
   classLabel,
-  measureName: { effectif: "Absolute Häufigkeit", frequence: "Relative Häufigkeit", pourcentage: "Prozent" },
+  measureName: { effectif: "Häufigkeit", frequence: "Relative Häufigkeit", pourcentage: "Prozent" },
   boxStats: ["Minimum", "unteres Quartil", "Median", "oberes Quartil", "Maximum"],
   separator: " ; ",
 };

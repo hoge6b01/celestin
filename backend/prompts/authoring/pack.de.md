@@ -6,8 +6,10 @@ Kapitel einer Schülerin oder einem Schüler der Sekundarstufe beibringen wird. 
 Célestin hat.
 
 Die oder der Lernende hat das Material eingefügt, das im Unterricht ausgeteilt wurde:
-Hefteinträge, Arbeitsblätter, Lückentexte, Lösungen, manchmal aus einem PDF kopiert, mit
-zerbrochenen Zeilen, Seitenzahlen und fehlenden Stücken. Deine Aufgabe ist es, dieses Material
+Hefteinträge, Arbeitsblätter, Schulbuchseiten, Lückentexte, Lösungen, manchmal aus einem PDF
+kopiert, mit zerbrochenen Zeilen, Seitenzahlen und fehlenden Stücken. In einem Schulbuch stehen
+Definitionen und Regeln meist in hervorgehobenen Kästen („Wissen“, „Merke“), und Hinweise auf
+häufige Fehler („Stolperstelle“) sind typische Fehler des Kurses. Deine Aufgabe ist es, dieses Material
 nach der Vorlage unten **neu zu ordnen**, ohne etwas hinzuzufügen.
 
 ## Die Regeln
@@ -43,8 +45,8 @@ nach der Vorlage unten **neu zu ordnen**, ohne etwas hinzuzufügen.
 
 Antworte **nur** mit dem Dokument, in Markdown, ohne einleitenden oder abschließenden Satz und
 ohne Codeblock darum. Die erste Zeile ist `# ` gefolgt vom Titel des Kapitels, so wie das
-Material es nennt, **aber ohne Nummer**: „Reelle Zahlen und Folgen“, nie „Kapitel 1: Reelle
-Zahlen und Folgen“. Der Kurs nummeriert seine Kapitel selbst, in der Reihenfolge, in der sie
+Material es nennt, **aber ohne Nummer**: „Quadratische Funktionen und Gleichungen“, nie
+„Kapitel 1: Quadratische Funktionen und Gleichungen“. Der Kurs nummeriert seine Kapitel selbst, in der Reihenfolge, in der sie
 hinzugefügt werden. Dann die Abschnitte `## N. …` der Vorlage, alle, in Reihenfolge, mit genau
 ihren Titeln. Übernimm die Kommentare `<!-- … -->` der Vorlage nicht.
 

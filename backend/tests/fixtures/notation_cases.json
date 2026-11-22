@@ -327,49 +327,49 @@
     "language": "de",
     "kind": "interval",
     "args": [2, 5, true, false],
-    "text": "[2 ; 5["
+    "text": "[2; 5["
   },
   {
     "language": "de",
     "kind": "interval",
     "args": [2, 5, false, true],
-    "text": "]2 ; 5]"
+    "text": "]2; 5]"
   },
   {
     "language": "de",
     "kind": "interval",
     "args": [2, 5, true, true],
-    "text": "[2 ; 5]"
+    "text": "[2; 5]"
   },
   {
     "language": "de",
     "kind": "interval",
     "args": [2, 5, false, false],
-    "text": "]2 ; 5["
+    "text": "]2; 5["
   },
   {
     "language": "de",
     "kind": "interval",
     "args": [null, 2, false, true],
-    "text": "]−∞ ; 2]"
+    "text": "]−∞; 2]"
   },
   {
     "language": "de",
     "kind": "interval",
     "args": [5, null, true, false],
-    "text": "[5 ; +∞["
+    "text": "[5; +∞["
   },
   {
     "language": "de",
     "kind": "interval",
     "args": [null, null, false, false],
-    "text": "]−∞ ; +∞["
+    "text": "]−∞; +∞["
   },
   {
     "language": "de",
     "kind": "interval",
     "args": [-1.5, 0.25, true, false],
-    "text": "[−1,5 ; 0,25["
+    "text": "[−1,5; 0,25["
   },
   {
     "language": "de",

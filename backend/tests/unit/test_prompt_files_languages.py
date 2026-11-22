@@ -422,6 +422,6 @@ def test_the_german_authoring_prompt_reads_a_transcription_of_pages() -> None:
 def test_the_german_subject_prompts_write_the_nrw_notation() -> None:
     """Spec 021 R7.1: the board section of the maths prompt states the NRW forms."""
     maths = read("subjects/mathematics.md", "de")
-    for form in ("0{,}45", "10 000", "]a ; b[", "P(2 | −1,5)", "P(2 \\mid -1{,}5)", "12,5 %"):
+    for form in ("0{,}45", "10 000", "]a; b[", "P(2 | −1,5)", "P(2 \\mid -1{,}5)", "12,5 %"):
         assert form in maths, form
     assert "Wenn das Material anders schreibt, folgst du dem Material." in maths
