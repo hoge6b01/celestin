@@ -1,72 +1,110 @@
 # Spec 023 — Answer checker: design
 
-Requirements: `requirements.md` (with the owner's decisions in §6). Builds on specs 005 (pack),
-009 (expression grammar), 011/017/021 (course languages), 018 (stored tool entries), 020
-(révision record). The implementation branch must start from a branch that has spec 021's code
-(German rows): every per-language table below has an `fr`, `en`, `nl` and `de` row.
+Requirements: `requirements.md` (owner's decisions §6, review decisions §7). Revised after the
+review in `specs/023-review.md`. Builds on specs 005 (pack), 008/009 (board, expression grammar),
+011/017/021 (course languages), 018 (stored tool entries), 020 (révision record). The
+implementation branch must start from a branch that has spec 021's code (German rows): every
+per-language table below has an `fr`, `en`, `nl` and `de` row.
 
 ## 1. Overview
 
-Three pieces, all deterministic, no model call:
+Four pieces, all deterministic, no model call:
 
 1. **Keys in the pack.** Each typical exercise (pack §6) whose material gives a solution carries
-   one key line per answer: `**Schlüssel:** number 374`. The authoring agent copies it from the
-   solution; `index_pack` validates it with the same readers that read student answers.
-2. **`app/domain/answers/`**: readers per answer kind and course language, a unit table, the
-   comparison, and variant keys computed by code (evaluation; real roots of a polynomial).
-3. **`check_answer`**, the eighth tool, declared last, offered in parcours and révision. It
-   checks that the answer is in the student's latest message, settles it against a pack key or a
-   variant, returns the verdict to the model (never the key) and emits `answer.checked`; the board
-   marks the latest exercise card. In révision the verdict is written to `revision_results` with
-   `source = 'checker'`.
+   one key line per answer: `**Schlüssel:** number 374`, optionally with the task the code can
+   compute: `**Schlüssel a):** set {2; 3} | solve x^2 - 5x + 6 = 0`. `index_pack` validates keys
+   with the readers that read student answers; a key with a task is recomputed once per content
+   version and marked `agrees` or `needs_review`.
+2. **`app/domain/answers/`**: readers per kind and course language, exact arithmetic
+   (`Fraction`), a unit table with exact factors, an exact algebra for polynomials and rational
+   expressions, the comparison, and variant keys computed by code.
+3. **Bound exercises.** An `exercise` or `check_question` card on `display_board` may carry
+   `check` (a pack reference or a variant task). The server validates it, shows what is checked
+   (the pack's statement verbatim, or the task as the code reads it), and gives the card an
+   `exercise_id`. Checking always goes through that id.
+4. **`check_answer`**, the eighth tool, declared last, offered in parcours and révision. It checks
+   that the answer is in the student's latest message, resolves the bound exercise, settles the
+   answer, returns verdict and basis (never the key), and emits `answer.checked`; the board marks
+   the card with that `exercise_id`. In révision the result is written to a new table
+   `exercise_results`, beside (not into) the self-assessed `revision_results`.
 
-### Decisions beyond the requirements (flag to the owner)
+### Design decisions for the owner's review
 
-- **D1. The key never appears in the tool output**, not even after a correct answer or a reveal
-  (narrows R3.5): a correct answer is the key already; a reveal stays the tutor's existing
-  step-by-step reveal. Removes a leak path.
-- **D2. `check_question` cards are unchanged** (defers R4.3): their `correct_option_id` is the
-  model's word, so by R3 it is not a key. A pack exercise with a `choice` key is set as an
-  `exercise` card listing its options, and the student's choice goes through `check_answer`.
-  Changing the card would move the pinned board declarations for no gain in this spec.
-- **D3. Variants are computed, not only substituted** (refines §1.2): an equation or inequality
-  variant is accepted only if it is a polynomial in one variable of degree ≤ 4; the code computes
-  its real solutions (then checks them by substitution). This settles « all solutions found »
-  without trusting a solution count from the model. Non-polynomial relations are not checkable.
-- **D4. One variable** per expression or relation (the grammar's `evaluate(node, value)`).
-  Several variables are not checkable in this spec.
+Kept from the first design:
+
+- **D1. The key never appears in a tool output**, not even after a correct answer or a reveal.
+- **D3. Equations and inequalities are solved only as polynomials** in one variable of degree
+  1–4. Rational roots are found exactly; an irrational root is checkable only when the task states
+  a rounding rule (§7.1 of the requirements: exact by default).
+- **D4. One variable** per expression, relation or task.
+
+Superseded: **D2** (« `check_question` unchanged ») → requirements §7.6, implemented by D9.
+
+New, from the review decisions:
+
+- **D5. Binding through the board.** `ExerciseCard` and `CheckQuestionCard` gain an optional
+  `check`. For a pack reference, the server **replaces the card's statement with the pack's
+  statement of that exercise** (the block under its heading, cut before its answer and key lines);
+  if it cannot cut it reliably, the card is shown unbound. For a variant, the server **adds the task
+  as it parsed it** under the statement (« Aufgabe: x² − 5x + 6 = 0 lösen », plus the rounding rule
+  if any); that line is the checked task. The board declarations change (pins regenerated).
+- **D6. `exercise_id` is a short HMAC** over the checking data (user, chapter, content version,
+  pack reference or canonical task). Text turns resolve it from the séance's stored entries; voice
+  turns get the bound checking data back from the browser and verify it against the id, so no
+  server state is added and the model cannot invent a binding.
+- **D7. Recomputing a stored solution** needs the task on the key line, copied from the statement
+  by the authoring agent. Agreement gives the basis « material, recomputed »; disagreement marks the
+  key `needs_review`: no verdict, a notice on the card and in the pack view, nothing recorded, the
+  stored solution untouched. Agreement is evidence, not proof, that the task was copied right: two
+  independent lines of the material agree.
+- **D8. Expression classes**: polynomials and rational expressions with rational coefficients in
+  one variable, compared exactly (`n₁·d₂ = n₂·d₁` as polynomials). Rational expressions count as
+  equal on their common domain (`(x²−1)/(x−1)` = `x+1`). Anything else (roots, powers with a
+  non-integer exponent, functions) is « not reliably checkable ». Sample points are gone.
+- **D9. Multiple choice**: `CheckQuestionCard` loses `correct_option_id` and `feedback`. Unbound, a
+  pick is sent as today and shows no verdict. Bound (`check.exercise` to a `choice` key), the
+  question is the pack's statement and the buttons are the key's option ids; the verdict comes
+  from `check_answer`. Stored cards replay without a verdict; the cahier no longer reveals an option.
+- **D10. Révision results per exercise** in a new table `exercise_results`; `revision_results` and
+  the section outcome logic of spec 020 are untouched.
+- **D11. Rounding rule semantics**: with `round d`, the key is the material's rounded value;
+  `correct` iff the answer equals it exactly; `precision` iff the answer is the same value rounded
+  differently (more decimals that round to the key, or fewer decimals the key rounds to); else
+  `incorrect`. With `±t`: `correct` iff `|a − k| ≤ t`. Without either: exact equality only.
 
 ## 2. Architecture
 
 ```
- pack.md (§6 exercise)                    learner message (parcours / révision turn,
-  **Schlüssel a):** interval ]2 ; 5]        voice: VoiceToolRequest.learner_text)
-        │                                              │
-        ▼                                              ▼
- domain/pack.py index_pack ──► domain/answers/keys.py  TurnContext.learner_text
-   (validates keys, issues)     pack_keys(md, lang)          │
-        │                           │                        │
-        ▼                           ▼                        ▼
- chapters.py LessonChapter.keys ── cached per content version ──► services/tools/check.py
- revision.py RevisionChapter.keys                                  check_answer(args, ctx)
-                                                                    │  answer ∈ learner_text?
-                                                                    │  key = pack key | variant
-                                                                    ▼
-                                              domain/answers/check.py check(key, answer, lang)
-                                                (readers.py, units.py, variants.py, expression.py)
-                                                                    │ Verdict
-                         ┌──────────────────────────────────────────┼────────────────────┐
-                         ▼                                          ▼                    ▼
-              tool output (course language,              SSE answer.checked      révision: turn_results
-              verdict words, never the key)              {verdict, kind,          → revision_results
-                                                          exercise, marker}         source='checker'
-                                                                    │
-                                                    frontend reducer: status of the
-                                                    latest exercise board (correct/wrong)
+ pack.md §6 exercise                         display_board (card with `check`)
+  statement …                                   │ services/tools/board.py → bind.py
+  **Antwort:** …                                │  pack ref → statement from pack, key
+  **Schlüssel a):** set {2; 3} | solve …        │  variant  → task line, computed key
+        │                                       │  exercise_id = HMAC(checking data)
+        ▼                                       ▼
+ domain/pack.py index_pack                stored ToolEntry (card + check data)
+   └► domain/answers/keys.py pack_keys          │
+        (parse, recompute task → agrees /       │       learner message / voice transcript
+         needs_review)                          │                 │
+        │                                       ▼                 ▼
+ LessonChapter.keys / RevisionChapter.keys ─► services/tools/check.py check_answer(args, ctx)
+   (cached per content version)                  │ answer ∈ learner_text?
+                                                 │ exercise_id → bound exercise → key
+                                                 ▼
+                              domain/answers/check.py check(key, answer, lang) → Checked
+                                (readers, units, algebra, variants; exact)
+                                                 │ verdict + basis
+                 ┌───────────────────────────────┼──────────────────────────┐
+                 ▼                               ▼                          ▼
+     tool output (course language,     SSE answer.checked            révision: turn_results
+     verdict + source, never key)      {exercise_id, verdict,        → exercise_results
+                                        basis, …}                     (per exercise)
+                                                 │
+                                   frontend: mark on the card with that exercise_id
 ```
 
 Layering: `domain/answers/` imports only `domain/` (`expression.py`, `language.py`,
-`notation.py`). `services/tools/check.py` is the tool. Nothing imports `openai`.
+`notation.py`, `pack.py` types). `services/tools/bind.py` and `check.py` are services. Nothing
+imports `openai`.
 
 ## 3. Components and interfaces
 
@@ -81,347 +119,451 @@ can use them: `NUMBER`, `_decimal_comma`, `_thousands_comma`, `_german_number`, 
 
 ```python
 Kind = Literal["choice", "number", "expression", "interval", "set", "point", "word"]
-KINDS: tuple[Kind, ...]
+Rational = Fraction
 
-@dataclass(frozen=True) class Unit:        dimension: str; factor: float; symbol: str
-@dataclass(frozen=True) class Quantity:    value: Fraction | float; decimals: int | None; unit: Unit | None
-@dataclass(frozen=True) class Bound:       value: float; closed: bool          # ±inf never closed
+@dataclass(frozen=True) class Unit:        dimension: str; factor: Fraction; symbol: str
+@dataclass(frozen=True) class Rule:        round: int | None = None; tolerance: Fraction | None = None
+                                           # at most one of them; none = exact
+@dataclass(frozen=True) class Quantity:    value: Fraction; decimals: int; unit: Unit | None
+@dataclass(frozen=True) class Bound:       value: Fraction | None; closed: bool   # None = ±∞, never closed
 @dataclass(frozen=True) class Interval:    low: Bound; high: Bound
 
-@dataclass(frozen=True) class ChoiceKey:     option: str
-@dataclass(frozen=True) class NumberKey:     quantity: Quantity; tolerance: float | None   # explicit ±
-@dataclass(frozen=True) class ExpressionKey: source: str; variable: str; domain: Interval
-@dataclass(frozen=True) class IntervalKey:   union: tuple[Interval, ...]
-@dataclass(frozen=True) class SetKey:        values: tuple[float, ...]       # sorted, distinct
-@dataclass(frozen=True) class PointKey:      coords: tuple[float, ...]
+@dataclass(frozen=True) class ChoiceKey:     option: str; options: tuple[str, ...]
+@dataclass(frozen=True) class NumberKey:     quantity: Quantity; rule: Rule
+@dataclass(frozen=True) class ExpressionKey: function: RationalFunction; variable: str  # see 3.6
+@dataclass(frozen=True) class IntervalKey:   union: tuple[Interval, ...]; rule: Rule
+@dataclass(frozen=True) class SetKey:        values: tuple[Fraction, ...]; rule: Rule   # sorted, distinct
+@dataclass(frozen=True) class PointKey:      coords: tuple[Fraction, ...]; rule: Rule
 @dataclass(frozen=True) class WordKey:       words: tuple[str, ...]; accents: bool
 Key = ChoiceKey | NumberKey | ExpressionKey | IntervalKey | SetKey | PointKey | WordKey
 
-Verdict = Literal["correct", "incorrect", "unreadable", "precision", "unit_differs"]
-@dataclass(frozen=True) class Checked:  verdict: Verdict; kind: Kind; expected: str | None
-    # `expected`: for `unreadable`, an example of the expected form in the course's notation
+Basis = Literal["material", "computed", "both"]
+Verdict = Literal["correct", "incorrect", "unreadable", "precision", "unit_differs",
+                  "undecided"]                      # undecided = not reliably checkable
+@dataclass(frozen=True) class Checked:
+    verdict: Verdict; kind: Kind; basis: Basis
+    expected: str | None   # `unreadable`: an example of the expected form, course notation
+    reason: str | None     # `undecided`: a reason code (`expression_class`, …)
 ```
+
+Recorded verdicts (révision, spec 022): `correct`, `incorrect`, `precision`, `unit_differs`.
+`unreadable` and `undecided` are never recorded.
 
 ### 3.3 `app/domain/answers/readers.py`
 
 One reader per kind, per course language (`by_language` tables). The same reader parses a key and
-a student's answer. Each returns a value or `None` (unreadable).
+a student's answer. Each returns a value or `None` (unreadable). Every number is read to an exact
+`Fraction` with its written decimals (`12,50` → 25/2, decimals 2).
 
 | Kind | Accepts (de shown; fr/nl like de with `;`, en with `,` and `.`) | Notes |
 | --- | --- | --- |
-| number | `374`, `12,5`, `12.500`, `10 000`, `3/4`, `−2`, `12,5 %`, `25 m/s`, `x = 3` | `NUMBER[lang]`; `a/b` exact `Fraction`; trailing unit via `units.py`; leading `<name> =` stripped |
-| expression | `2(x+1)`, `2x+2`, `f(x) = x^2` | `expression.parse(src, frozenset({variable}))`; leading `f(x) =`/`y =` stripped; decimal comma → point for the course languages with a comma (`1,5x`) |
-| interval | `]2 ; 5]`, `[−∞ ; 3[` refused (∞ never closed), `]−∞ ; 3[ ∪ ]4 ; +∞[`, `x > 2` (one-sided only), `L = ]2 ; 5]` | value reader built beside `INTERVAL[lang]`; `∞`, `inf`, `unendlich` |
-| set | `{−1; 3}`, `L = {−1; 3}`, `x = −1 oder x = 3`, `x₁ = −1; x₂ = 3`, `{}` / `∅` / `L = { }` (empty) | separators `SET_SEPARATOR[lang]`, joiners `JOINERS[lang]` (de: `oder`, `und`; fr: `ou`, `et`; nl: `of`, `en`; en: `or`, `and`) |
+| number | `374`, `12,5`, `12.500`, `10 000`, `3/4`, `−2`, `12,5 %`, `25 m/s`, `x = 3` | `NUMBER[lang]`; trailing unit via `units.py`; leading `<name> =` stripped |
+| expression | `2(x+1)`, `2x+2`, `f(x) = x^2` | `expression.parse(src, frozenset({variable}))`, then `algebra.py`; leading `f(x) =`/`y =` stripped; decimal comma → point in comma languages (`1,5x`) |
+| interval | `]2 ; 5]`, `]−∞ ; 3[ ∪ ]4 ; +∞[`, `x > 2` (one-sided only), `L = ]2 ; 5]` | `[−∞ …` refused (∞ never closed); `∞`, `inf`, `unendlich` |
+| set | `{−1; 3}`, `L = {−1; 3}`, `x = −1 oder x = 3`, `x₁ = −1; x₂ = 3`, `{}` / `∅` / `L = { }` | `SET_SEPARATOR[lang]`, `JOINERS[lang]` (de `oder`/`und`; fr `ou`/`et`; nl `of`/`en`; en `or`/`and`) |
 | point | `P(2 \| −1,5)`, `(2 \| −1,5)`, `(2; −1,5)` (de); `(2, −1.5)` (en) | `COORDS[lang]` plus a value reader; leading name stripped |
 | word | any text | NFKC, casefold, collapse spaces; accents stripped unless the key says `accents` |
-| choice | `B`, `b)`, `Antwort B`, `(b)` | one option id, case-insensitive |
+| choice | `B`, `b)`, `Antwort B`, `(b)` | one option id among the key's `options`, case-insensitive |
 
 Normalisation before every reader: NFKC, `−`/`–` → `-`, `·`/`×` kept for expressions, surrounding
 `$…$` stripped (`text.MATH`), trailing `.` stripped.
 
 ### 3.4 `app/domain/answers/units.py`
 
-`UNITS: dict[str, Unit]`, aliases to `(dimension, factor to SI)`:
+`UNITS: dict[str, Unit]`, aliases to `(dimension, exact factor to SI)`:
 
-- length: mm, cm, dm, m, km; mass: mg, g, kg, t; time: s, min, h; speed: m/s, km/h (`m·s^-1`,
-  `km·h^-1`, `m/s`, `km/h`); volume: mL/ml, cL/cl, dL/dl, L/l, cm³, dm³, m³ (`cm^3`); area: mm², cm²,
-  dm², m², km², a, ha; percent: `%` (dimensionless, factor 0.01).
-- Same dimension → compare in SI. Different dimension, or a unit outside the table that differs
-  from the key's written unit → `unit_differs`.
-- Key with a physical unit, answer without one → `unit_differs` (the course expects the unit).
-  Key without a unit, answer with a physical unit → `unit_differs`.
-- `%` is dimensionless with factor 0.01: `12,5 %` and `0,125` are equal in either direction.
+- length: mm, cm, dm, m, km; mass: mg, g, kg, t; time: s, min, h; speed: m/s, km/h (factor 5/18;
+  aliases `m·s^-1`, `km·h^-1`); volume: mL/ml, cL/cl, dL/dl, L/l, cm³, dm³, m³ (`cm^3`); area: mm²,
+  cm², dm², m², km², a, ha; percent: `%` (dimensionless, factor 1/100).
+- Same dimension → the answer is converted **exactly into the key's unit**, then compared under
+  the key's rule (a rounding rule applies in the key's unit).
+- Different dimension, or a unit outside the table that differs from the key's written unit →
+  `unit_differs`. Key with a physical unit, answer without → `unit_differs`; key without a unit,
+  answer with a physical one → `unit_differs`.
+- `%`: `12,5 %` and `0,125` are equal in either direction.
 
 ### 3.5 `app/domain/answers/check.py`
 
 ```python
-def check(key: Key, answer: str, language: CourseLanguage) -> Checked
+def check(key: Key, answer: str, language: CourseLanguage, basis: Basis) -> Checked
 ```
 
-- **number**: read; unit handling (3.4); explicit `tolerance` → `|a−k| ≤ tol`; else key decimals
-  `d` (from the key as written; `Fraction` keys and computed keys: see variants) → answer must
-  have `≥ d` decimals and `round(a, d) == round(k, d)` (half away from zero) → correct; fewer
-  decimals and equal at the answer's precision → `precision`; else incorrect. Integer key: `d = 0`,
-  `5,0` equals `5`. Fractions: `3/4` equals `0,75` (exact compare when both exact).
-- **expression**: parse both; 12 fixed sample points spread over `domain` (default `[−10 ; 10]`),
-  irrational offsets (`k·0.7071 + 0.3183`, clipped into the domain); skip points where either is
-  NaN; need ≥ 6 shared defined points and the same definedness at every point; equal if
-  `|a−b| ≤ 1e−9·max(1, |a|, |b|)` everywhere.
-- **interval**: union normalised (sorted, merged); equal bounds (`1e−9`) and equal closedness.
-- **set**: same size, pairwise equal sorted (`1e−9`); duplicates in the answer ignored.
-- **point**: same dimension, coordinates equal (`1e−9`, or decimals as for numbers when the key
-  has decimals).
+- **number**: read; units (3.4); then the rule (D11): exact `==`; `±t`; or `round d` with
+  `precision`.
+- **expression**: both to `RationalFunction` (3.6); either outside the class → `undecided`
+  (`expression_class`); else `n₁·d₂ == n₂·d₁` → correct, else incorrect.
+- **interval**: unions normalised (sorted, merged); bounds compared under the rule (exact by
+  default), closedness equal.
+- **set**: same size, pairwise equal under the rule; duplicates in the answer ignored.
+- **point**: same dimension, coordinates equal under the rule.
 - **word**: normalised answer equals one of `words`.
-- **choice**: equal ids, case-insensitive.
+- **choice**: the id is one of `options` (else unreadable), then equal ids.
 
-### 3.6 `app/domain/answers/variants.py`
+Never raises on student input (fuzz test).
+
+### 3.6 `app/domain/answers/algebra.py`
+
+- `Polynomial`: tuple of `Fraction` coefficients, normalised (no trailing zeros).
+- `RationalFunction(num: Polynomial, den: Polynomial)`.
+- `to_rational(node, variable) -> RationalFunction | None`: over the `expression.py` AST: number
+  literals (exact), the variable, `+`, `−`, `×`, `÷`, unary minus, `^` with an integer literal
+  exponent (negative allowed: `x^-2` = 1/x²). Any function, a non-integer or non-literal exponent,
+  another variable → `None`. Caps: degree ≤ 24, numerator/denominator ≤ 64 coefficients, each
+  coefficient's numerator and denominator ≤ 10¹² → else `None`.
+- `evaluate_exact(rf, x: Fraction) -> Fraction | None` (`None` where the denominator is 0).
+- `real_roots(p: Polynomial, degree 1–4) -> Roots(rational: tuple[Fraction, ...],
+  irrational: tuple[float, ...])`: integer-scaled coefficients; rational root theorem on the
+  divisors (coefficients ≤ 10⁶ in absolute value, else `None`), deflation by each rational root;
+  the remaining factor (degree ≤ 4): closed form for degree ≤ 2, Durand–Kerner then Newton polish
+  for 3–4, imaginary parts `< 1e−9` dropped, each irrational root verified by sign change. No numpy.
+
+### 3.7 `app/domain/answers/variants.py`: tasks
+
+One form for a pack key's task and for a variant:
 
 ```python
-@dataclass(frozen=True) class Evaluate: expression: str; variable: str; at: str   # `at` in course notation
-@dataclass(frozen=True) class Relation: relation: str; variable: str             # one of = < > ≤ ≥ (<=, >=)
+@dataclass(frozen=True) class Evaluate: expression: str; variable: str; at: str      # `at` in course notation
+@dataclass(frozen=True) class Solve:    relation: str; variable: str                 # one of = < > ≤ ≥ (<=, >=)
+Task = Evaluate | Solve
 
-def variant_key(variant: Evaluate | Relation, kind: Kind, language) -> Key | NotCheckable
+def task_key(task: Task, kind: Kind, rule: Rule, language) -> Key | NotCheckable
+def task_text(task: Task, rule: Rule, language) -> str    # the line the card shows (3.9)
 ```
 
-- `Evaluate` → `NumberKey` from `evaluate(parse(expression), number(at))`; decimals: exact
-  integer → 0; terminating decimal → its digits (≤ 6); otherwise `None`, and `check` accepts an
-  answer with `≥ 2` decimals that rounds to the value at its own decimals, or the exact fraction
-  when the evaluation is rational.
-- `Relation` → split on the single top-level relational operator; `left − right` must be a
-  polynomial in `variable` of degree 1–4 (`polynomial.py`: coefficient expansion over the AST: `+`,
-  `−`, `×`, `^` with a non-negative integer literal, no function, no division by an expression
-  containing the variable). Real roots: closed form for degree ≤ 2, Durand–Kerner then Newton
-  polish for 3–4, imaginary parts `< 1e−9` dropped, roots verified by substitution.
-  - `=` → `SetKey(roots)`; with `kind == "number"` only when exactly one real root.
-  - `<`, `>`, `≤`, `≥` → `IntervalKey` from the sign of the polynomial between roots.
-- Anything else → `NotCheckable(reason)`: `not_polynomial`, `degree`, `variables`, `parse`,
-  `kind_mismatch`, `no_unique_number`.
+- `Evaluate`: `to_rational` and `at` exact → `NumberKey` exact. Outside the class (e.g. `√`) →
+  only with `round d`: `expression.evaluate` in float, the key is the value rounded to `d`
+  decimals; if the value is within `1e−9` of a rounding boundary → `NotCheckable("boundary")`.
+  Division by zero → `NotCheckable("undefined")`.
+- `Solve`: split on the single top-level relational operator; `left − right` must be a polynomial
+  (rational function with constant denominator) of degree 1–4 (D3); `real_roots`.
+  - `=`: `SetKey(roots)`; `kind == "number"` only with exactly one real root.
+  - `<`, `>`, `≤`, `≥`: `IntervalKey` from the sign of the polynomial on each piece (tested exactly
+    at a rational point inside the piece).
+  - Any irrational root (or bound) requires `round d`, applied to it; otherwise
+    `NotCheckable("irrational")`.
+- Reasons: `not_polynomial`, `degree`, `variables`, `parse`, `kind_mismatch`,
+  `no_unique_number`, `irrational`, `boundary`, `undefined`, `size`.
 
-### 3.7 Keys in the pack: `app/domain/answers/keys.py`
+### 3.8 Keys in the pack: `app/domain/answers/keys.py`
 
 Line form, under an exercise's `#### N.M.K` heading, after its answer line:
 
 ```
-**<KEY_LABEL>[ <sub>]:** <kind> <key in the course's notation>[ <modifier>]
+**<KEY_LABEL>[ <sub>]:** <kind> <key in the course's notation>[ <rule>][ | <task>]
 ```
 
 - `KEY_LABEL = by_language(fr="Clé", en="Key", nl="Sleutel", de="Schlüssel")`.
 - `<sub>`: a sub-question label, `a)`, `b)`, `1)`, …; absent for a single answer.
-- `<kind>`: the fixed identifiers of `KINDS` (language-neutral; the model never says them aloud).
-- Modifiers: number `±<tol>`; expression `in <interval>` (domain) and the variable first:
-  `expression x 2(x+1)`; word alternatives separated by ` / `, `accents` flag; choice: the option
-  id.
+- `<kind>`: the fixed identifiers of `Kind` (language-neutral; never said aloud). `set` is the
+  requirements' `solution_set`.
+- `<rule>`: `round <d>` or `±<tolerance>` (number, interval, set, point), only when the exercise
+  states it; word: alternatives separated by ` / `, `accents` flag; choice: `of <ids>` lists the
+  exercise's option ids.
+- `<task>`: `solve <relation>` or `eval <expression> at <variable> = <value>`, copied from the
+  statement; optional.
 - Examples (de): `**Schlüssel:** number 374` · `**Schlüssel:** number 25 m/s` ·
-  `**Schlüssel a):** interval ]2 ; 5]` · `**Schlüssel b):** set {−1; 3}` ·
-  `**Schlüssel:** point P(2 | −1,5)` · `**Schlüssel:** expression x 2(x+1)` ·
-  `**Schlüssel:** word Hypotenuse` · `**Schlüssel:** choice B`.
+  `**Schlüssel:** number 3,14 round 2` · `**Schlüssel a):** interval ]2 ; 5]` ·
+  `**Schlüssel b):** set {2; 3} | solve x^2 - 5x + 6 = 0` · `**Schlüssel:** point P(2 | −1,5)` ·
+  `**Schlüssel:** expression x 2(x+1)` · `**Schlüssel:** word Hypotenuse` ·
+  `**Schlüssel:** choice B of A B C D`.
 
 ```python
 ExerciseRef = str   # "6.1.2" or "6.1.2 a)"
-def pack_keys(markdown: str, language: CourseLanguage) -> tuple[dict[ExerciseRef, Key], list[ContentIssue]]
+@dataclass(frozen=True) class PackKey:
+    key: Key; task: Task | None
+    status: Literal["material", "agrees", "needs_review"]
+def pack_keys(markdown: str, language) -> tuple[dict[ExerciseRef, PackKey], list[ContentIssue]]
+def exercise_statement(markdown: str, ref: ExerciseRef, language) -> str | None
 ```
 
-- Read in the same walk as `index_pack` (fences skipped, only under the exercises section); a key
-  line outside an exercise, a duplicate ref, an unknown kind or an unreadable key is a
-  `ContentIssue` with codes `pack.key_outside`, `pack.key_duplicate`, `pack.key_kind`,
-  `pack.key_unreadable` (catalog keys in fr/en/nl/de, `render_issue`).
-- `index_pack` calls it and returns the issues with its own; `PackIndex` gains
+- Read in the same walk as `index_pack` (fences skipped, only under the exercises section). Issue
+  codes: `pack.key_outside`, `pack.key_duplicate`, `pack.key_kind`, `pack.key_unreadable`,
+  `pack.key_task` (task unreadable or not checkable), `pack.key_class` (an expression key outside
+  the class of 3.6) (catalog keys in fr/en/nl/de, `render_issue`).
+- With a task: `task_key` computed and compared with the stored key under the key's rule → status
+  `agrees` (basis `both`) or `needs_review` (no verdict, D7). No task → `material`.
+- `exercise_statement`: the lines under the exercise's heading up to the first line starting with
+  `ANSWER_LABEL[lang]` (the templates' answer label, `**Antwort:**` etc.) or `KEY_LABEL[lang]`;
+  `None` when neither line is found (the statement cannot be cut from its solution).
+- `index_pack` calls `pack_keys` and returns its issues; `PackIndex` gains
   `keys: frozenset[ExerciseRef]`.
 
-### 3.8 Authoring
+### 3.9 Binding: `app/services/tools/bind.py` and the board cards
 
-- Templates `templates/<subject>.pack.<lang>.md` (4 subjects × 4 languages): the §6 comment gains
-  the key rule (one line per answer, from the solution only, not for « not corrected » or for an
-  answer listed in §7, not for kinds outside the list) with the examples of 3.7.
-- `prompts/authoring/pack.<lang>.md`: the same rule in the agent's words; « copy, never compute ».
-- Repair: key issues are repaired like other pack issues (bounded attempts). If the last attempt
-  still has only key issues, the runner drops those key lines and appends one §7 item per dropped
-  key (`DROPPED_KEY[lang]`: « 6.1.2 a): Lösung nicht als Schlüssel lesbar »), then accepts the pack.
-  `authoring_stage` logs `keys`, `keys_dropped`.
-- Packs stored before this spec: no key lines, `keys = {}`; nothing re-authored.
-- Pack editor (`PUT …/pack`): same `index_pack`, so key issues are 422 `content_invalid` with
-  their messages, like any pack issue.
+```python
+class CheckSpec(BaseModel):              # on ExerciseCard and CheckQuestionCard; strict, nullable fields
+    exercise: Annotated[str, Field(max_length=16)] | None        # "6.1.2 a)"
+    task: TaskArgs | None                                         # variant
+class TaskArgs(BaseModel):
+    kind: Kind
+    solve: Annotated[str, Field(max_length=120)] | None
+    evaluate: Annotated[str, Field(max_length=120)] | None
+    at: Annotated[str, Field(max_length=24)] | None
+    variable: Annotated[str, Field(pattern=r"^[a-z]$")]
+    round: Annotated[int, Field(ge=0, le=6)] | None
+```
 
-### 3.9 Chapters and révision scope
+`display_board` runs `bind(card, ctx)` for each card with `check`:
 
-- `LessonChapter.keys: Mapping[ExerciseRef, Key]`, parsed by `CurriculumCache` per (chapter id,
-  content version) beside the curriculum.
-- `RevisionChapter.keys`, from the same cache when the scope is built.
+1. Exactly one of `exercise` / `task`; `check_question` only with `exercise`.
+2. Pack: the ref is in the chapter's keys (révision: of the section's chapter); the statement cuts
+   (`exercise_statement`); for `check_question` the key is `choice`. Variant: `task_key` succeeds.
+3. On success the server rewrites the card: pack → `statement` (or `question`) := the pack's
+   statement; `check_question` options := the key's ids (text = id); variant → a `task` line is set
+   to `task_text`. Then `exercise_id := "x" + hex(HMAC_SHA256(k, canonical))[:10]`, where
+   `canonical` is JSON of (user id, chapter id, content version, ref or task, rule) and `k` is
+   derived from `SESSION_SECRET` (`hkdf`, label `celestin-exercise-v1`). The card carries
+   `exercise_id`, `bound: {exercise | task}`, `status: material | agrees | needs_review |
+   computed`.
+4. On failure the card is shown unbound (no `exercise_id`), and the tool output says why, in the
+   course language (« 6.1.2 a) ist nicht prüfbar: … Begleite ohne Urteil. »). Never a tool error:
+   the board still shows.
+5. `needs_review`: the card is bound (so a check can say why there is no verdict) and shows a notice
+   (catalog `board_needs_review`: « Die Lösung in deinem Material sollte geprüft werden; hier gibt
+   es keine automatische Bewertung. »), without the solution.
 
-### 3.10 `TurnContext.learner_text`
+The board's tool output gains one line per bound card: « Prüfbar: x3f9a1c2d0 (6.1.2 a)) ».
 
-- New field `learner_text: str | None = None`: the learner message of this turn, set by the
-  parcours chat route and the révision turn route (`payload.message`); `None` on an opening turn
-  and in discussion.
-- Voice: `VoiceToolRequest.learner_text: str ≤ 2000 = ""`, the latest user transcript the
-  browser's Realtime bridge holds; `/api/voice/tool` puts it on the context.
+Declarations: `ExerciseCard` gains `check: CheckSpec | None`; `CheckQuestionCard` loses
+`correct_option_id` and `feedback`, gains `check`. The server-set fields (`exercise_id`, `bound`,
+`status`, `task`) are not in the declaration (output-only model). `board_declarations.json` is
+regenerated deliberately.
+
+### 3.10 `TurnContext` additions
+
+- `learner_text: str | None`: this turn's learner message (parcours chat route, révision turn
+  route); `None` on an opening turn and in discussion.
+- `bound: Mapping[str, BoundExercise]`: exercise id → checking data, loaded from the conversation's
+  stored entries at turn start and extended by `display_board` in the turn.
+- Voice: `VoiceToolRequest` gains `learner_text: str ≤ 2000 = ""` (latest user transcript) and
+  `bound: list[BoundExercise] ≤ 20` (what the browser's board holds); `/api/voice/tool` verifies
+  each against its id (recomputed HMAC) and drops the others.
 - `answers/normalise.py: contains(learner_text, answer) -> bool`: both normalised (3.3), spaces
   removed, casefolded; substring test.
 
 ### 3.11 The tool: `app/services/tools/check.py`
 
 ```python
-class VariantArgs(BaseModel):            # strict: every field present, nullable where optional
-    expression: str | None               # Evaluate
-    at: str | None
-    relation: str | None                 # Relation
-    variable: Annotated[str, Field(pattern=r"^[a-z]$")]
-
 class CheckAnswerArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     answer: Annotated[str, Field(min_length=1, max_length=200)]
-    kind: Kind
-    exercise: Annotated[str, Field(max_length=16)] | None     # "6.1.2" / "6.1.2 a)"
-    variant: VariantArgs | None
+    exercise_id: Annotated[str, Field(pattern=r"^x[0-9a-f]{10}$")]
     chapter: Annotated[int, Field(ge=1, le=999)] | None       # révision: required
     section_id: Annotated[str, Field(max_length=40)] | None   # révision: required
 
 @dataclass(frozen=True)
 class AnswerChecked:
     checked: Checked
-    exercise: str | None
+    exercise_id: str
+    exercise: str | None          # pack ref, or None for a variant
+    task: str | None              # the variant's task text
     chapter_id: str | None
     section_id: str | None
-    output: str          # course language, never the key
-    marker: Marker       # marker.answer_checked.<verdict>, label = exercise ref or the variant word
+    output: str                   # course language, never the key
+    marker: Marker                # marker.answer_checked.<verdict>
 ```
 
-Order of checks (each refusal is a `ToolValidationError` in the course language, `_WORDS` by
-language):
+Order of checks (each refusal a `ToolValidationError` in the course language):
 
-1. exactly one of `exercise` / `variant` (`one_source`);
-2. révision: `chapter` and `section_id` present and valid (reuses `result.py`'s words); parcours:
-   ignored;
-3. `ctx.learner_text` present and `contains(learner_text, answer)` (`not_the_students`: « Prüfe
-   nur die Antwort, die dein Gegenüber in der letzten Nachricht geschrieben hat, wörtlich. »);
-4. exercise: ref in the chapter's keys (`no_key`: « Für 6.1.2 gibt es keinen Schlüssel: begleite
-   ohne Urteil. »), kind equal to the key's kind (`kind_mismatch`);
-5. variant: `variant_key` (`not_checkable` with the reason, and « begleite ohne Urteil »);
-6. `check(key, answer, language)`.
+1. révision: `chapter` and `section_id` present and valid (reuses `result.py`'s words);
+2. `ctx.learner_text` present and `contains(learner_text, answer)` (`not_the_students`);
+3. `exercise_id` in `ctx.bound` (`unknown_exercise`: « Diese Aufgabe ist nicht gebunden: begleite
+   ohne Urteil. »);
+4. status `needs_review` → no check: output « Keine Bewertung: Die Lösung im Material und die
+   Nachrechnung weichen ab. Verrate nichts; begleite ohne Urteil. », event with verdict
+   `undecided`, reason `needs_review`;
+5. `check(key, answer, language, basis)`, basis from the status (`material`, `both`, `computed`).
 
-Output words (`_VERDICT_WORDS`, by language), e.g. de: correct « Vom Prüfer bestätigt: richtig. »;
-incorrect « Vom Prüfer: nicht richtig. Verrate die Lösung nicht; arbeite mit Fragen und
-Hinweisen weiter. »; unreadable « Nicht als {kind_word} lesbar. Bitte um die Antwort in der Form
-{expected}. »; precision « Der Wert stimmt, ist aber nicht genau genug gerundet (Lösung mit
-{decimals} Nachkommastellen). »; unit_differs « Die Einheit passt nicht zur Aufgabe. ».
+Output words by language and basis, e.g. de: correct/material « Stimmt mit der Lösung in deinem
+Material überein. »; correct/both « Stimmt mit der Lösung im Material überein, nachgerechnet. »;
+correct/computed « Nachgerechnet: richtig. »; incorrect « Stimmt nicht mit der Lösung im Material
+überein. » / « Nachgerechnet: nicht richtig. », then « Verrate die Lösung nicht; arbeite mit Fragen
+und Hinweisen weiter. »; unreadable « Nicht als {kind_word} lesbar. Bitte um die Antwort in der
+Form {expected}. »; precision « Der Wert stimmt, ist aber nicht so gerundet, wie die Aufgabe es
+verlangt ({decimals} Nachkommastellen). »; unit_differs « Die Einheit passt nicht. »; undecided
+« Das kann der Prüfer nicht sicher entscheiden: begleite ohne Urteil. »
 
 Registry row: `name="check_answer"`, `strict=True`, declared **after `record_result`**;
-`replay=replay_check` (the output rebuilt from `entry.verdict`), `shown=shown_check` (marker and
-`{verdict, kind, exercise}`), `check=None` (a reported parcours turn may not carry it: voice reports
-go through `/api/voice/tool`, which runs it live). `_MODE_TOOLS`: parcours += `check_answer`;
-révision += `check_answer`; discussion unchanged. Description (French, as all declarations):
-« Fais vérifier par le code la réponse finale de ton élève… ».
+`replay=replay_check` (output rebuilt from the stored entry), `shown=shown_check`, `check=None`.
+`_MODE_TOOLS`: parcours += `check_answer`; révision += `check_answer`; discussion unchanged
+(discussion boards may still carry `check`; binding is harmless there, nothing can check it).
+Description (French, as all declarations): « Fais vérifier par le code la réponse finale de ton
+élève à un exercice prüfbar… ».
 
 ### 3.12 Events, stored entries, history
 
-- SSE event `answer.checked`: `{verdict, kind, exercise: str | null, chapter_id: str | null,
-  section_id: str | null, marker}`. Added to `api/schemas` events, `tool_events.event_of`,
-  `frontend/src/lib/tutor/types.ts` `TutorEvent`, and to the design of spec 001 §3.2's list.
-- `ToolEntry` gains `verdict: Verdict | None` (only on a `check_answer` entry; the validator
-  `_recorded_on_their_tool_only` extended) and reuses `chapter_id`. Never sent to the model.
-- `history.to_provider_input` replays the stored output via `replay_check`.
+- SSE `answer.checked`: `{exercise_id, verdict, basis, kind, exercise: str | null, chapter_id,
+  section_id, marker}`. Added to `api/schemas` events, `tool_events.event_of`,
+  `frontend/src/lib/tutor/types.ts` `TutorEvent`.
+- `ToolEntry` gains `verdict`, `basis`, `exercise_id` (only on a `check_answer` entry; the
+  validator `_recorded_on_their_tool_only` extended). The bound card fields live in the stored
+  board entry's card JSON. Never sent to the model beyond the replayed outputs.
+- `history.to_provider_input` replays the stored outputs (`replay_check`, the board's output with
+  its « Prüfbar » lines).
 
-### 3.13 Révision record
+### 3.13 Révision record: `exercise_results`
 
-- Migration `0015_result_source`: `revision_results.source` String(8) NOT NULL default `'self'`,
-  check `source in ('self','checker')`. Existing rows: `'self'`.
-- `NewResult.source`; `revision.turn_results` reads `check_answer` entries too: verdict →
-  outcome `correct → solid`, `precision`/`unit_differs → shaky`, `incorrect → todo`,
-  `unreadable →` nothing.
-- Reads: latest per (chapter, section, **source**). `Noted` gains `source`; `RevisionScope.earlier`
-  keyed by `(chapter_id, section_id, source)`.
-- Trailing state message (`curriculum_render`, by language): per section « selbst: fragile
-  (12.11.) · Prüfer: richtig (12.11.) ».
-- `GET/POST /api/courses/{c}/revision`: `results[]` items gain `source`. `record_result`'s tally
-  counts self-assessments only (unchanged).
-- Parcours: no write (decision 1).
+- Migration `0015_exercise_results`: table `exercise_results`
+  `(id, user_id, course_id, chapter_id, section_id, conversation_id, exercise_ref String(16) NULL,
+  task String(200) NULL, kind String(12), verdict String(12), basis String(8), created_at)`,
+  check constraints on `verdict in ('correct','incorrect','precision','unit_differs')` and
+  `basis`, exactly one of `exercise_ref` / `task`; FKs and cascades as `revision_results`
+  (deleted with the account, course, chapter). Index `(user_id, course_id, chapter_id)`.
+- `revision.turn_results` also collects `check_answer` entries with a recordable verdict; written
+  in the same transaction as the transcript (spec 020 D6).
+- Reads: latest per `(chapter_id, section_id, exercise_ref or task)`.
+- `revision_results`, `record_result`'s tally and the section outcome logic of spec 020 are
+  unchanged: a checker result never sets an outcome (requirements R5.2).
+- Trailing state message (`curriculum_render`, by language), per section after the
+  self-assessment: « geprüft: 6.1.2 a) richtig (12.11.), Variante x² − 5x + 6 = 0 nicht richtig
+  (12.11.) », at most 5 per section, newest first.
+- `GET/POST /api/courses/{c}/revision`: response gains `checked[]`:
+  `{chapter_id, section_id, exercise, task, verdict, basis, at}`.
+- Parcours: no write (decision §6.1).
 
 ### 3.14 Tutor prompt and mode layers
 
-- `tutor.<lang>.md` (4 files): the paragraph « Tu ne corriges pas mécaniquement » becomes: for a
-  final answer to an exercise that has a key (the pack shows `Clé`) or to a checkable variant,
-  call `check_answer` and say its verdict; never say « juste » / « faux » without it; for
-  anything else the previous rule holds. Sends the answer exactly as the student wrote it.
+- `tutor.<lang>.md` (4 files): the paragraph « Tu ne corriges pas mécaniquement » becomes: to set
+  a checkable exercise, put it on the board with `check` (a pack exercise that has a key, or a
+  variant task); for the final answer, call `check_answer` with the card's `exercise_id` and the
+  answer exactly as written, and say its verdict with its source; never say « juste » / « faux »
+  without it; for anything else the previous rule holds. A `check_question` gives no verdict unless
+  bound.
 - `modes/revision.<lang>.md`: after `check_answer`, still show the course's wording and ask the
   student's own assessment (spec 020 D3).
 - `modes/parcours.<lang>.md`: one line, the checker for exercises with keys.
-- Pins regenerated deliberately: `system_text_sha*.txt` (all modes and languages),
-  `test_prompt_files_languages` (twins still match).
+- Pins regenerated deliberately: `system_text_sha*.txt`, `test_prompt_files_languages`.
 
-### 3.15 Frontend
+### 3.15 Authoring
 
-- `types.ts`: `AnswerCheckedEvent`, `Verdict`; `StoredEntry` tool fields `verdict`, `kind`,
-  `exercise`.
-- Reducer (`use-tutor-session.ts`): `answer.checked` → transcript marker; the status of the
-  latest board whose cards include an `exercise` card: `correct` → `"correct"`, `incorrect` →
-  `"wrong"`, other verdicts → unchanged (`"open"`); `history` gains the tool entry. Replay in
-  `sessionFromEntries` the same way.
-- `whiteboard.tsx`: the strip reads the board's status instead of the hard-coded `"done"`;
-  `StatusGlyph` already has `correct` / `wrong` labels. `ExerciseBoard` shows a small verdict
-  line under the statement (catalog `board_verdict_*`, 4 languages).
-- Révision « Bilan » (`revision-bilan.tsx`, `lib/tutor/revision.ts latestResults`): two chips per
-  section, « selbst » and « Prüfer », each with its date.
-- Pack view: exercises with a key show a small « prüfbar » badge (catalog key), from the
-  key lines in the pack Markdown (frontend regex on `KEY_LABEL` words, case table shared with
-  the backend: `key_line_cases.json`).
-- Voice bridge: sends `learner_text` (latest user transcript) with every tool call.
+- Templates `templates/<subject>.pack.<lang>.md` (4 × 4): the §6 comment gains the key rule (one
+  line per answer, from the solution only; a rule only when the exercise states one; a task only
+  when the statement gives one of the two forms; not for « not corrected », §7, or other kinds)
+  with the examples of 3.8.
+- `prompts/authoring/pack.<lang>.md`: the same rule; « copy, never compute ».
+- Repair: key issues are repaired like other pack issues (bounded). If the last attempt still has
+  only key issues, the runner drops those key lines and appends one §7 item per dropped key
+  (`DROPPED_KEY[lang]`), then accepts the pack. `needs_review` is not an issue: the key stays, the
+  material is not changed. `authoring_stage` logs `keys`, `keys_dropped`, `keys_needs_review`.
+- Packs stored before this spec: no key lines; nothing re-authored.
+- Pack editor (`PUT …/pack`): same `index_pack`; key issues are 422 `content_invalid`.
+
+### 3.16 Chapters and révision scope
+
+- `LessonChapter.keys: Mapping[ExerciseRef, PackKey]`, parsed by `CurriculumCache` per (chapter
+  id, content version), task recomputation included.
+- `RevisionChapter.keys`, from the same cache.
+- Pack view API (`GET …/pack`): gains `keys: [{ref, status}]`.
+
+### 3.17 Frontend
+
+- `types.ts`: `AnswerCheckedEvent`, `Verdict`, `Basis`; card fields `exercise_id`, `status`,
+  `task`, `check`; `CheckQuestionCard` without `correct_option_id` / `feedback` (old stored cards
+  still parse: extra fields ignored).
+- Reducer (`use-tutor-session.ts`): `answer.checked` → transcript marker and the verdict of the
+  card with that `exercise_id` (any board of the séance); replay in `sessionFromEntries` the same
+  way. `BoardStatus` of a board: `correct`/`wrong` from its exercise card's verdict.
+- `ExerciseBoard`: the task line for a variant; under the statement a verdict line with its source
+  (catalog `board_verdict_<verdict>_<basis>`), the `needs_review` notice, the `undecided` note.
+- `CheckQuestionBoard`: a pick sends the answer as today and shows no colour; a bound card shows the
+  verdict from `answer.checked`. Cahier reread: no reveal.
+- Révision « Bilan » (`revision-bilan.tsx`): per section, the self-assessment chip as today and a
+  list of checked exercises (ref or task, verdict mark, source, date).
+- Pack view: per exercise a « prüfbar » or « Lösung prüfen » badge, from `keys`.
+- Voice bridge: sends `learner_text` and the board's bound exercises with every tool call.
 
 ## 4. Data models
 
 | Where | Change |
 | --- | --- |
-| `revision_results` | `source` String(8) NOT NULL default `'self'`, check constraint (migration 0015) |
-| `ToolEntry` (stored JSON) | `verdict` (check_answer only) |
+| `exercise_results` | new table (migration 0015), 3.13 |
+| `ExerciseCard`, `CheckQuestionCard` | `check` in; server fields `exercise_id`, `bound`, `status`, `task`; `CheckQuestionCard` − `correct_option_id`, − `feedback` |
+| `ToolEntry` (stored JSON) | `verdict`, `basis`, `exercise_id` (check_answer only) |
 | `PackIndex` | `keys: frozenset[str]` |
-| `LessonChapter`, `RevisionChapter` | `keys: Mapping[str, Key]` |
-| `TurnContext` | `learner_text: str \| None` |
-| `VoiceToolRequest` | `learner_text: str` (≤ 2000) |
-| Revision DTO `results[]` | `source: "self" \| "checker"` |
+| `LessonChapter`, `RevisionChapter` | `keys: Mapping[str, PackKey]` |
+| `TurnContext` | `learner_text`, `bound` |
+| `VoiceToolRequest` | `learner_text` (≤ 2000), `bound` (≤ 20) |
+| Révision DTO | `checked[]` |
+| Pack DTO | `keys[]` |
 | SSE | `answer.checked` |
-
-No new table. No content stored beyond what the transcript already holds (the answer is in the
-learner entry and the tool's arguments).
 
 ## 5. Error handling
 
-- Model errors are tool errors (3.11), never HTTP errors; the model reads the reason and either
-  asks the student again (unreadable, not the student's) or guides without a verdict.
-- A `check_answer` call in discussion is refused by `registry.execute` (not offered).
-- Reader exceptions are impossible by contract: readers return `None`; `check` never raises on
-  student input (fuzz test). An exception in the checker is a bug: logged `check_failed`, the tool
-  returns a tool error « Prüfer nicht verfügbar: begleite ohne Urteil. », the turn continues.
-- Authoring: unreadable keys → repair → drop with §7 item (3.8); never a failed run because of keys.
-- Old stored `ToolEntry` JSON without `verdict` stays valid.
+- Model errors are tool errors (3.11) or an unbound card (3.9), never HTTP errors; the model reads
+  the reason and asks again (unreadable, not the student's) or guides without a verdict.
+- `check_answer` in discussion is refused by `registry.execute` (not offered).
+- Readers return `None`, `check` never raises on student input. An exception in the checker is a
+  bug: logged `check_failed`, tool output « Prüfer nicht verfügbar: begleite ohne Urteil. », the
+  turn continues.
+- A forged or stale `exercise_id` (voice) fails the HMAC → `unknown_exercise`. A content version
+  change makes old ids unknown: the card replays, a new check is refused.
+- Authoring: unreadable keys → repair → drop with §7 item; `needs_review` never fails a run.
+- Old stored `ToolEntry` and card JSON stay valid.
 
 ## 6. Testing strategy
 
 - **Case tables** `tests/fixtures/answer_cases.json`: per kind × course language, rows
-  `{key, answer, verdict}` incl. notation variants (`12,5` / `12.5` / `12.500` / `10 000`), units
-  (`90 km/h` vs `25 m/s`), precision (`3,1` vs key `3,14`), fractions, empty set, unions, ∞,
-  leading names (`x =`, `L =`, `P`), garbage → unreadable. `test_answer_cases.py` runs them.
-- `test_answer_readers.py`, `test_units.py`, `test_polynomial.py` (coefficients, roots degree 1–4,
-  repeated roots, no real root, non-polynomial refused), `test_variants.py`.
-- `test_pack_keys.py`: key lines per language, issues and codes; `test_pack.py` extended;
-  `test_issue_messages.py` parity for the new codes.
-- `test_check_tool.py`: each refusal, verdict outputs per language never containing the key
-  (`assert key_text not in output` over the case table), learner-text check, révision args.
-- Registry: `tests/fixtures/check_declaration.json` pins the new declaration; `board_declarations`
-  and `path_declarations` pins **unchanged**; `test_mode_tools` lists updated.
-- Révision: migration test (0015 up/down, defaults), `turn_results` mapping, reads per source,
-  render goldens of the state message per language.
-- Authoring: fake completion with good, bad and unrepairable keys (`fake_completion.py`); drop and
-  §7 item; `authoring_eval` fixtures gain key lines.
-- Model input wall: unchanged guarantees (`test_model_input_wall*.py` include a check call).
-- `test_language_is_passed.py`, `test_by_language_tables.py` cover the new tables.
-- Frontend: reducer (live and replay), strip status, ExerciseBoard verdict line, Bilan chips,
-  pack badge, `key_line_cases.json` copy compared byte-for-byte, language sweeps for the new copy.
+  `{key, answer, verdict}`: notation variants, exactness (`5` vs `5,0` vs `5,4`), rules (`round 2`:
+  `3,14` / `3,1416` / `3,1`; `±0,01`), units exact (`90 km/h` vs `25 m/s`, `0,5 m` vs `50 cm`),
+  fractions, empty set, unions, ∞, leading names, garbage → unreadable, expressions outside the
+  class → undecided.
+- `test_algebra.py`: expansion, rational normalisation, `n₁·d₂ = n₂·d₁`, caps, exact roots, rational
+  root theorem, irrational roots, repeated roots, no real root.
+- `test_variants.py`: every reason; `round` boundary guard; inequalities.
+- `test_pack_keys.py`: key lines per language, rules, tasks, `agrees` / `needs_review`,
+  `exercise_statement` cut (answer line never included), issue codes; `test_issue_messages.py`.
+- `test_bind.py`: pack and variant binding, statement replaced, task line, unbound reasons, HMAC
+  stable and user/chapter/version-bound, voice verification.
+- `test_check_tool.py`: each refusal, outputs per language and basis never containing the key,
+  learner-text check, `needs_review`, révision args.
+- Registry: new `check_declaration.json`; `board_declarations.json` regenerated (the diff reviewed:
+  only `check` added, `correct_option_id`/`feedback` removed); `path_declarations` unchanged;
+  `test_mode_tools`.
+- Révision: migration 0015 up/down; `turn_results` with checks; reads; DTO; render goldens of the
+  state message per language; `revision_results` untouched.
+- Authoring: fake completion with good, bad, unrepairable and disagreeing keys.
+- `test_model_input_wall*.py`, `test_language_is_passed.py`, `test_by_language_tables.py`.
+- Frontend: reducer (live, replay, verdict on a non-latest board), CheckQuestionBoard without
+  colour, old stored card, ExerciseBoard verdict/source/notice, Bilan list, pack badges, voice
+  bridge payload, language sweeps.
 - Real-model probes (cost money, not in pytest): `scripts/probe.py --checker` per language: the
-  tutor calls `check_answer` on a keyed exercise, passes the answer verbatim, never states a
-  verdict without it, never leaks the key after `incorrect`.
+  tutor binds a keyed exercise, calls `check_answer` with its id and the answer verbatim, never
+  states a verdict without it, never leaks the key.
 
 ## 7. Performance
 
-- `check` is pure Python, sub-millisecond; root finding for degree ≤ 4 is a few hundred
-  iterations at most.
-- Keys parsed once per chapter content version (cache), not per turn.
-- The new declaration and the prompt changes move the cached prefix once per mode and language;
-  no per-turn variation is added before the breakpoint.
+- `check` is pure Python, sub-millisecond; caps bound the algebra (3.6).
+- Keys and their recomputation once per chapter content version (cache), not per turn.
+- `bound` loaded once per turn from the conversation's stored entries (already read for history).
+- The declaration and prompt changes move the cached prefix once per mode and language.
 
 ## 8. Security
 
-- No evaluation of model or student text: the expression grammar parser only
-  (`MAX_DEPTH`, length caps); answers ≤ 200 chars, voice `learner_text` ≤ 2000.
-- The answer must come from the student's message: the model cannot check (and so claim a
-  verdict on) text the student did not write.
-- The key never leaves the server in a tool output; the pack (which the tutor reads) already holds
-  the solution, as today.
-- Routes unchanged except `/api/voice/tool` body; guards and ownership as before.
+- No evaluation of model or student text: the expression grammar parser only; length caps
+  everywhere (answer 200, task 120, voice `learner_text` 2000, `bound` 20).
+- The answer must come from the student's message; the exercise must be bound by the server (HMAC):
+  the model can neither check text the student did not write nor an exercise that was not shown.
+- The key never leaves the server in a tool output or a card; the pack's statement shown on a card
+  is cut before its answer and key lines.
+- Routes unchanged except the `/api/voice/tool` body and the révision and pack DTOs.
 
 ## 9. Monitoring and observability
 
-- Log `answer_checked`: user, course, chapter, mode, kind, verdict, source (`pack` | `variant`),
-  exercise ref, ms. Never the answer or the key.
-- Log `answer_check_refused`: reason code only.
-- Authoring: `keys`, `keys_dropped` counts on `authoring_stage`.
-- `revision_result` log gains `source`.
+- `exercise_bound`: user, chapter, mode, source (`pack` | `variant`), status, ref; or
+  `exercise_unbound` with the reason code.
+- `answer_checked`: user, course, chapter, mode, kind, verdict, basis, exercise ref, ms. Never the
+  answer or the key. `answer_check_refused`: reason code only.
+- Authoring: `keys`, `keys_dropped`, `keys_needs_review` on `authoring_stage`.
+- `exercise_result` log on write (ids, verdict, basis).
+
+## 10. Open questions for the owner
+
+1. **D8 domain rule**: count `(x²−1)/(x−1)` and `x+1` as equal (common domain, as a « vereinfache »
+   exercise expects), or refuse a verdict when the domains differ?
+2. **D9 old cards**: stored `check_question` cards replay without colour from now on (consistent),
+   or keep their old display as history?
+3. **D9 feedback**: the model's `feedback` text after a pick is removed (it could say « richtig »);
+   Célestin says it in speech instead. Acceptable?
+4. **Contract with spec 022**: proposed: 022 sets its items as bound exercises (3.9), checks them
+   with `check()` directly (no tool call), records them in `exercise_results` with the test's id,
+   and treats `undecided` and unbound items as self-assessed. To be settled when 022 is designed.

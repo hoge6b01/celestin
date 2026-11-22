@@ -1,25 +1,34 @@
 # Spec 023 — Answer checker: mechanical verdicts on final answers
 
-Status: requirements only, written at the owner's request (22 November 2026). Not to be designed
-or built until the owner resumes it. Foundation of spec 022 (practice test).
+Status: requirements written at the owner's request (22 November 2026), open questions answered
+by the owner (§6), then revised after a review the owner did with another assistant
+(`specs/023-review.md`, decisions in §7; they supersede §6.4 and design proposal D2).
+Foundation of spec 022 (practice test).
 
 ## 1. Introduction
 
 Today no answer is checked by code. The tutor prompt says Célestin cannot check a calculation
 with certainty and never declares « juste » or « faux » (`tutor.<lang>.md`); révision records
 only the student's self-assessment (spec 020 D3); a `check_question` card carries a
-`correct_option_id` the model chose, checked in the browser and never reported back.
+`correct_option_id` the model chose, and the browser colours the student's pick green or red from
+it: a verdict that is the model's word.
 
 This spec adds a **checker**: deterministic code that compares a student's final answer with an
 answer key and returns a verdict, with no model judging the answer. It adds:
 
 1. **Checkable keys in the pack**: each typical exercise (pack §6) whose material gives a solution
    carries its answer kind and key in a fixed, parseable form, validated when the chapter is
-   prepared and when the pack is edited.
-2. **The checker module**: one reader and one comparison per answer kind, per course language.
-3. **A tool, `check_answer`**, offered in the parcours and in révision: Célestin hands it the
-   student's final answer and either an exercise id (key from the pack) or a variant's data (key
-   derived or verified by code). The verdict is shown to the student and, in révision, recorded.
+   prepared and when the pack is edited; optionally the exercise's task in a form the code can
+   compute, so the stored solution can be recomputed.
+2. **The checker module**: one reader and one comparison per answer kind, per course language,
+   with exact arithmetic.
+3. **Exercises bound to their checking data**: when Célestin sets a checkable exercise, the server
+   records it with its checking data and shows what is checked; the answer is checked against
+   that recorded exercise.
+4. **A tool, `check_answer`**, offered in the parcours and in révision: Célestin hands it the
+   student's final answer and the recorded exercise. The verdict, with its source (the student's
+   material, a computation, or both), is shown to the student and, in révision, recorded for that
+   exercise.
 
 Value: the product's principle « it never grades from impression » holds for every answer the
 code can check, and the révision record gains verdicts the student can trust.
@@ -28,43 +37,47 @@ code can check, and the révision record gains verdicts the student can trust.
 
 | Kind | Key form (illustrative; the design fixes it) | Verdict |
 | --- | --- | --- |
-| `choice` | option id | equal |
-| `number` | value, optional tolerance or rounding, optional unit | equal within tolerance; equal unit after the pack's conversions, else « unit differs » |
-| `expression` | expression in the grammar of `domain/expression.py`, variable, domain | equivalent: equal values at sample points of the domain; optionally a required form (« factorised », « simplified ») checked structurally |
+| `choice` | option id, among the exercise's option ids | equal |
+| `number` | value, optional explicit tolerance or rounding rule, optional unit | exactly equal (after the built-in unit conversions); a tolerance or rounding rule only when the exercise states it (§7.1) |
+| `expression` | expression in the grammar of `domain/expression.py`, variable | equivalent, only where the code can establish it for the expression's class (§7.5); otherwise « not reliably checkable » |
 | `interval` | bounds and open/closed ends, or a union of intervals | same bounds and ends |
 | `solution_set` | finite set of numbers | same set, order and repetition ignored |
-| `point` | coordinates | same coordinates within tolerance |
+| `point` | coordinates | same coordinates |
 | `word` | one or several accepted words from the pack's vocabulary (pack §5) | equal after normalising case, spaces, accents (accents configurable per subject: a language course may require them) |
 
 Every kind reads the student's text in the **course's** notation (`by_language` tables): decimal
 comma or point, thousands grouping, `]a ; b[` or `(a, b)`, `P(2 | −1,5)` or `(2, −1.5)`, `%`.
-Fractions and decimals of the same value are equal for `number` unless the key requires a form.
+Fractions and decimals of the same value are equal (`3/4` = `0,75`).
 
-### 1.2 Variants: verify instead of solve
+### 1.2 Variants: settled by code
 
 A variant (the course's exercise with other numbers) has no key in the material. The checker
-accepts it only when code can settle the answer without solving:
+accepts it only when code can settle the answer itself:
 
 - **Evaluate**: the item is an expression to compute at given values → the code computes the key.
-- **Substitute**: the item is an equation or inequality → the code substitutes the student's
-  answer (a number, a solution set, an interval's bounds and an inner point) and checks it holds.
-  A `solution_set` answer is accepted only if every element satisfies the relation and the
-  item states how many solutions there are (or the relation is polynomial of a degree the code can
-  bound).
+- **Solve**: the item is an equation or inequality of a class the code can solve completely (the
+  design fixes the class) → the code computes the full solution and checks the answer against it.
 - **Anything else** (a derivation, a proof, a word problem whose relation the item does not state)
   is not a checkable variant: Célestin guides as today, without a verdict.
+
+The task the code computes is the task the student sees: the server shows it on the exercise card
+from the checking data (§7.2).
 
 ## 2. Alignment with product vision
 
 - Principle 4 (brief §5): *it never grades from impression; where an answer is mechanically
-  checkable, the verdict comes from a checker*. This spec builds that checker.
+  checkable, the verdict comes from a checker*. This spec builds that checker, and removes the one
+  verdict today that is the model's word (`check_question`, §7.6).
 - Brief §12.1 (checking outside maths) and phase C « Later: a mechanical checker feeding the same
   record »: answered for the kinds of §1.1, in every subject whose pack has them.
-- Spec 020 D3: « When a mechanical checker exists, it feeds the same record. »
-- Principle 1 and 2: keys come from the student's material; the authoring agent copies them, it
-  does not invent them.
+- Spec 020 D3: « When a mechanical checker exists, it feeds the same record. » It does, per
+  exercise, beside the self-assessment (§7.7).
+- Principles 1 and 2: keys come from the student's material; the authoring agent copies them, it
+  does not invent them. A verdict against the material says so; it does not claim the material
+  is right (§7.3).
 - Principle 3: a verdict never reveals the key while the exercise is open.
-- Spec 022 (practice test) depends on the keys, the checker and its case tables.
+- Spec 022 (practice test) depends on the keys, the exercise binding, the checker and its case
+  tables.
 
 ## 3. Requirements
 
@@ -81,94 +94,118 @@ answers to the course's exercises get a reliable verdict.
 3. No key is written for an exercise whose material gives no solution, whose solution the agent
    flagged in « points to check » (pack §7), or whose answer is not of a kind of §1.1.
 4. The authoring agent copies the key from the material's solution; it does not compute a key
-   the material does not give.
-5. `domain/pack.py` validates every key when the pack is prepared or edited: the kind is known, the
-   key parses in the course's notation, the referenced exercise exists. An invalid key is a
-   content issue the agent repairs (bounded, as today); a key that cannot be repaired is dropped
-   with a « points to check » entry, never stored invalid.
-6. Packs stored before this spec stay valid; their exercises simply have no key.
-7. The pack editor (`PUT …/pack`) shows and validates keys like any other pack content.
+   the material does not give. A tolerance or rounding rule is written only when the exercise
+   states one (§7.1).
+5. Where the exercise's task is of a class the code can compute (§1.2), the key line may also
+   carry that task in the fixed form, copied from the statement, so the code can recompute the
+   solution (§7.3, §7.4).
+6. `domain/pack.py` validates every key when the pack is prepared or edited: the kind is known, the
+   key parses in the course's notation, the referenced exercise exists, an `expression` key is of a
+   class the checker can establish equivalence for. An invalid key is a content issue the agent
+   repairs (bounded, as today); a key that cannot be repaired is dropped with a « points to check »
+   entry, never stored invalid.
+7. When a key carries a task and the computed solution differs from the stored one, the key is
+   marked as needing review (§7.4); the stored solution is kept as the material gives it.
+8. Packs stored before this spec stay valid; their exercises simply have no key.
+9. The pack editor (`PUT …/pack`) shows and validates keys like any other pack content.
 
 ### R2. The checker module
 
 As a developer, I want one deterministic module that settles answers, so that every mode and
 spec 022 share the same verdicts.
 
-1. Input: answer kind, key (or variant data, §1.2), the student's answer text, the course
-   language. Output: `correct`, `incorrect`, or `unreadable` with the expected form; for
-   `number` also `unit_differs` or `precision` (right value, wrong rounding) when they apply.
-2. No model call, no I/O, no randomness: sample points for `expression` are fixed per call.
-3. Imports no SDK and no catalog; text it returns to the model is in the course language, text for
+1. Input: answer kind, key (from the pack or computed for a variant), the student's answer text,
+   the course language. Output: `correct`, `incorrect`, `unreadable` with the expected form; for
+   `number` also `unit_differs`, and `precision` (right value, not rounded as the exercise asks)
+   when the key carries a rounding rule; or **not reliably checkable** when the code cannot settle
+   the answer (§7.5). Every verdict names its **basis**: the material's solution, a computation, or
+   both (§7.3).
+2. Exact arithmetic: numbers read from keys and answers are exact rationals; unit conversions are
+   exact; floating point is used only where a rounding rule is stated.
+3. No model call, no I/O, no randomness.
+4. Imports no SDK and no catalog; text it returns to the model is in the course language, text for
    the student goes through the catalog (spec 010).
-4. Each kind has a case table per course language (`tests/fixtures/checker_cases.json` or one per
-   kind), with accepted, refused and unreadable inputs; where the frontend parses the same notation,
-   the table is shared byte-identically, like `notation_cases.json`.
-5. It reuses the existing readers: `domain/expression.py` (`parse`, `evaluate`), `NUMBER`,
-   `INTERVAL`, `COORDS` (`services/tools/figures.py`), moved to a shared place if needed.
-6. Unreadable is not incorrect: the student is told the expected form with an example in the
+5. Each kind has a case table per course language (`tests/fixtures/answer_cases.json` or one per
+   kind), with accepted, refused, unreadable and not-checkable inputs; where the frontend parses
+   the same notation, the table is shared byte-identically, like `notation_cases.json`.
+6. It reuses the existing readers: `domain/expression.py` (`parse`), `NUMBER`, `INTERVAL`, `COORDS`
+   (`services/tools/figures.py`), moved to a shared place.
+7. Unreadable is not incorrect: the student is told the expected form with an example in the
    course's notation and answers again.
 
-### R3. The `check_answer` tool
+### R3. Exercises bound to their checking data, and the `check_answer` tool
 
-As a student, I want Célestin to have my final answer checked by the code, so that « right » or
-« wrong » is never his impression.
+As a student, I want my answer checked against the exercise I was actually given, so that the
+verdict is about that exercise and nothing else.
 
-1. Arguments: the student's final answer, and either an exercise reference (pack id, sub-question)
-   or a variant's data (kind, relation or expression, given values), plus for révision the chapter
-   and section.
-2. **The answer is the student's**: the tool refuses (tool error the model reads) an answer that
+1. **Binding** (§7.2): when Célestin puts a checkable exercise on the board, it names its checking
+   data (a pack exercise reference, or a variant's task). The server validates it, records the
+   exercise with an id and its checking data in the séance's stored entries, and shows the
+   student what is checked: for a pack exercise, the exercise as the pack states it; for a
+   variant, the task as the code reads it. An exercise whose checking data does not validate is
+   shown without being checkable.
+2. `check_answer` takes the student's final answer and the recorded exercise's id (plus for
+   révision the chapter and section). It checks against that recorded exercise only; the verdict
+   belongs to that exercise and is shown on its card, wherever it is in the séance.
+3. **The answer is the student's**: the tool refuses (tool error the model reads) an answer that
    is not found, after normalising spaces, in the latest learner message.
-3. A pack reference without a key, or variant data that is not checkable (§1.2), is refused with a
-   tool error that tells Célestin to guide without a verdict.
-4. Offered in the parcours and in révision; not in discussion. Declared after every existing tool,
-   so existing declarations keep their bytes (`path_declarations.json`, `board_declarations.json`).
-5. Returns the verdict to the model, never the key while the exercise is open; the key is part of
-   the output only after a reveal (the existing reveal rules) or a correct answer.
-6. Emits an event the board renders as a verdict mark on the exercise (correct, incorrect,
-   unreadable with the expected form); stored in the transcript and replayed like every tool since
-   spec 018 (`replay`, `shown`).
-7. Available in voice through `/api/voice/tool`, as every tool of the mode is.
+4. An unknown or uncheckable exercise id, an exercise marked as needing review (§7.4), or an
+   answer the code cannot settle (§7.5) gives no correct/incorrect verdict: the tool tells Célestin
+   to guide without one.
+5. Offered in the parcours and in révision; not in discussion. Declared after every existing tool.
+6. Returns the verdict and its basis to the model, never the key.
+7. Emits an event the board renders as a verdict mark on the bound exercise (correct, incorrect,
+   unreadable with the expected form, not reliably checkable), with its source in words; stored in
+   the transcript and replayed like every tool since spec 018 (`replay`, `shown`).
+8. Available in voice through `/api/voice/tool`, as every tool of the mode is.
 
 ### R4. The tutor's rule changes with the checker
 
 As a student, I want Célestin to say « right » or « wrong » only when the code said so, so that I
 can rely on it.
 
-1. The tutor prompt (every course language) says: for a final answer of a checkable exercise, call
-   `check_answer` and say the verdict it returns; never declare a verdict without it; for anything
-   else, the current rule (no verdict, have the student check) holds.
+1. The tutor prompt (every course language) says: for a final answer to a checkable exercise, call
+   `check_answer` and say the verdict it returns, with its source; never declare a verdict without
+   it; for anything else, the current rule (no verdict, have the student check) holds.
 2. After `incorrect`, the usual tutoring applies: questions and hints, no answer.
-3. A `check_question` card's correct option must be the pack's key when the question comes from a
-   pack exercise with a `choice` key; the student's pick is reported to the tool so the verdict is
-   the checker's, not only the browser's.
+3. **Multiple choice** (§7.6): a choice card shows a correct/incorrect verdict only when it is bound
+   to a `choice` key and the checker evaluated the pick. A choice card without such a key shows the
+   pick and no verdict; Célestin may still discuss it. The model-chosen correct option no longer
+   produces a verdict, in any mode; stored cards replay without one.
 
-### R5. Verdicts feed the révision record
+### R5. Checked exercises in the révision record
 
-As a student, I want verdicts from révision kept with my self-assessments, so that the next
-révision starts from what the code saw too.
+As a student, I want the exercises the code checked in révision kept with my self-assessments, so
+that the next révision starts from what the code saw too, without pretending one answer proves a
+whole section.
 
-1. In révision, each verdict is recorded per section in the révision record (spec 020
-   `revision_results` or a sibling table), marked as a checker verdict, distinct from a
-   self-assessment.
-2. Recorded with the transcript when the turn ends, in one transaction, as `record_result` is
-   (spec 020 D6): a stopped or failed turn records nothing.
-3. The « Bilan » and the révision's trailing state message show, per section, the latest
-   self-assessment and the latest verdicts, each with its source and date.
-4. Célestin still asks for the student's self-assessment after a question (spec 020 D3); the
+1. In révision, each checker verdict is recorded as the result of **that exercise** (its pack
+   reference, or the variant's task), with its date, verdict and basis, and the chapter and section
+   it belongs to (§7.7).
+2. A checker result does not set or change the section's self-assessed outcome (acquis, fragile,
+   à revoir) and never marks a section as mastered; the self-assessment stays beside it.
+3. Recorded with the transcript when the turn ends, in one transaction, as `record_result` is
+   (spec 020 D6): a stopped or failed turn records nothing. « Not reliably checkable » and
+   « needs review » record nothing.
+4. The « Bilan » and the révision's trailing state message show, per section, the latest
+   self-assessment and the checked exercises with their latest verdict, source and date.
+5. Célestin still asks for the student's self-assessment after a question (spec 020 D3); the
    verdict informs it and never replaces it.
-5. In the parcours, verdicts are shown and stored in the séance transcript only; they do not move
-   the path (`complete_section` stays the only way a section is done).
+6. In the parcours, verdicts are shown and stored in the séance transcript only; they do not move
+   the path (`complete_section` stays the only way a section is done) and are not recorded in
+   révision.
+7. Summaries over several checked exercises of a section belong to spec 022.
 
 ## 4. Non-functional requirements
 
 ### Architecture
-- Rules in code: the key, the verdict and the « answer is the student's » check are enforced in
-  the tool and the checker, not in prompt text.
+- Rules in code: the key, the binding, the verdict and the « answer is the student's » check are
+  enforced in the tools and the checker, not in prompt text.
 - Every per-language reader is a `by_language` table; a missing language fails at import.
 - French output of existing tools, prompts and renderings is byte-identical except where this spec
-  changes it on purpose (tutor prompt rule, pack templates); `system_text_sha*` pins are
-  regenerated deliberately.
-- Tool order and declarations stay fixed for the cached prefix; the new declaration goes last.
+  changes it on purpose (tutor prompt rule, pack templates, the board's exercise and choice cards);
+  `system_text_sha*` and declaration pins are regenerated deliberately.
+- Tool order stays fixed for the cached prefix; the new declaration goes last.
 - `test_language_is_passed.py`, `test_model_input_wall*.py` and `test_route_guards.py` cover the new
   code.
 
@@ -178,40 +215,70 @@ révision starts from what the code saw too.
   loop.
 
 ### Security and privacy
-- Model output is untrusted: tool arguments are validated by Pydantic, keys are parsed, the
-  expression grammar never executes text.
-- Logs and the usage ledger carry kind, verdict and ids, never answers or keys (spec 015).
-- Verdict rows are owned by the student and deleted with the course, the chapter or the account.
+- Model output is untrusted: tool arguments are validated by Pydantic, keys and tasks are parsed,
+  the expression grammar never executes text.
+- Logs and the usage ledger carry kind, verdict, basis and ids, never answers or keys (spec 015).
+- Result rows are owned by the student and deleted with the course, the chapter or the account.
 
 ### Reliability
 - Case tables pin every reader per course language; a notation change edits the table in the same
   commit, both copies where shared.
-- An exercise without a usable key degrades to today's behaviour (guidance without verdict),
-  never to an error for the student.
+- An exercise without a usable key, a key needing review, or an answer the code cannot settle
+  degrades to today's behaviour (guidance without verdict), never to an error for the student.
 
 ### Usability
-- The verdict mark and the « expected form » message in French, English, Dutch and German
-  (catalog); the example uses the course's notation.
-- The student can see on the pack's view which exercises have a checkable key.
+- The verdict mark, its source and the « expected form » and « not reliably checkable » messages
+  in French, English, Dutch and German (catalog); the example uses the course's notation.
+- The student can see on the pack's view which exercises have a checkable key, and which need
+  their solution reviewed.
 
 ## 5. Out of scope
 
-- The practice test itself (spec 022).
+- The practice test itself (spec 022), including section summaries over several checked
+  exercises.
 - Checking working steps, derivations, proofs, justifications, drawn graphs.
-- A computer algebra system: no symbolic solving; variants are verified by evaluation or
-  substitution only (§1.2).
+- A general computer algebra system: only the expression and equation classes the design names.
+- Required forms for `expression` (« factorised », « simplified »): §6.2.
 - Graded class test analysis and correction review (follow-ups named in spec 022).
 
 ## 6. Decisions on the open questions (owner, 22 November 2026)
 
 1. Parcours verdicts are shown and stored in the séance transcript only; they do not feed the
-   révision record (R5.5 stands).
+   révision record (R5.6 stands).
 2. Required forms for `expression` (« factorised », « simplified ») are later: this spec checks
    equivalence only; when an item asks for a form, the checker settles the value and Célestin
    looks at the form without a verdict.
 3. Units: a fixed built-in table of common SI conversions (length, mass, time, speed, volume,
    area, percent); `25 m/s` and `90 km/h` are equal. A unit outside the table is compared as
    written.
-4. Tolerance when the material states no rounding: the key's own decimals. An answer that rounds
-   to the key at the key's decimals is correct (more decimals allowed); fewer decimals than the
-   key is `precision` (« not precise enough »), not correct.
+4. ~~Tolerance when the material states no rounding: the key's own decimals.~~ Superseded by §7.1.
+
+## 7. Decisions from the review (owner, 22 November 2026; `specs/023-review.md`)
+
+1. **Numbers are exact by default.** A key of `5` accepts `5` and `5,0`, not `5,4`. A tolerance or
+   rounding rule applies only when the exercise or its key states it; `precision` exists only
+   under such a rule. Applies to converted units too (`90 km/h` = `25 m/s` exactly).
+2. **An answer is bound to its exercise.** The server records a checkable exercise with its id and
+   checking data when it is presented; the check uses that record, and the verdict belongs to that
+   exercise, not to whichever card is latest. Checking data that cannot be reliably associated
+   with the exercise gives no verdict. For a variant, the displayed task is the checked task.
+3. **A verdict names its source.** Against the material's solution, the app says the answer
+   matches or does not match the stored solution; a valid key does not prove the solution was
+   transcribed correctly or that the material is right. When the code also computes the solution,
+   it may say so. The source stays visible to the student.
+4. **Stored and computed solutions disagree → no verdict.** The app shows that the solution needs
+   review, without disclosing it while the exercise is open; the stored solution is not
+   overwritten and stays available; nothing is recorded.
+5. **Expression equivalence only where it can be established** for the expression's class; sample
+   points alone are not proof. Otherwise the result is « not reliably checkable » and Célestin
+   guides without a verdict; spec 022 treats such an item as self-assessed.
+6. **Multiple choice** shows a verdict only when the card is bound to a key and the checker
+   evaluated the pick; a model-chosen correct option no longer justifies one. Supersedes design
+   proposal D2 (« `check_question` unchanged »).
+7. **Révision records the checked exercise**, with date and source, beside the self-assessment; a
+   single verdict does not set a section's outcome. Replaces the earlier mapping of a verdict to
+   `solid` / `shaky` / `todo`.
+
+Open after the review: the exact contract with spec 022, and the implementation details of the
+binding, multiple choice, result storage, conflict handling and equivalence classes; the design
+proposes them for the owner's review.
