@@ -26,10 +26,10 @@ answer key and returns a verdict, with no model judging the answer. It adds:
 3. **Exercises bound to their checking data**: when Célestin sets a checkable exercise, the server
    records it with its checking data and shows what is checked; the answer is checked against
    that recorded exercise.
-4. **A tool, `check_answer`**, offered in the parcours and in révision: Célestin hands it the
-   student's final answer and the recorded exercise. The verdict, with its source (the student's
-   material, a computation, or both), is shown to the student and, in révision, recorded for that
-   exercise.
+4. **Direct checking of a confirmed submission** in parcours and révision: the server resolves
+   the presented exercise, checks the confirmed answer in code, and atomically stores the learner
+   submission and verdict. The verdict and its source are displayed and made available to
+   Célestin; the model does not choose whether to run the check or supply the final answer.
 
 Value: the product's principle « it never grades from impression » holds for every answer the
 code can check, and the révision record gains verdicts the student can trust.
@@ -44,8 +44,8 @@ Variants settled by code (§1.2) carry the rest of the practice.
 | Kind | Key form (illustrative; the design fixes it) | Verdict |
 | --- | --- | --- |
 | `choice` | option id, among the exercise's option ids | equal |
-| `number` | value (decimal, fraction, mixed number, repeating decimal, exact root form `a + b√c`, power of ten), optional rule, optional unit, optional required form | exactly equal (after the built-in unit conversions); a rounding rule when the exercise states it or the material marks the solution as rounded (§7.1, §8.1); a required unit or form when the exercise asks for one (§8.3) |
-| `expression` | expression in the grammar of `domain/expression.py`, variable | equivalent, only where the code can establish it for the expression's class (§7.5); otherwise « not reliably checkable »; a required form (« Scheitelpunktform ») is not checked and said so (§8.3) |
+| `number` | value (decimal, fraction, mixed number, repeating decimal, exact root form `a + b√c`, bounded rational linear forms in π, power of ten), optional rule, optional unit, optional required form | exactly equal (after the built-in unit conversions); a rounding rule when the exercise states it or the material marks the solution as rounded (§7.1, §8.1); a required unit or form when the exercise asks for one (§8.3) |
+| `expression` | expression in the grammar of `domain/expression.py`, variable, optional stated domain | equivalent, only where the code can establish equality of value and domain (§7.5, §11); otherwise « not reliably checkable »; a required form (« Scheitelpunktform ») is not checked and said so (§8.3) |
 | `interval` | bounds and open/closed ends, or a union of intervals | same bounds and ends |
 | `solution_set` | finite set of numbers (exact root forms included), the empty set, `ℝ` | same set, order and repetition ignored |
 | `point` | coordinates | same coordinates |
@@ -137,9 +137,9 @@ spec 022 share the same verdicts.
    rounding rule; for `expression` with a required form, `form_unchecked` (value right, form not
    checked, §8.3); or **not reliably checkable** when the code cannot settle the answer (§7.5). Every verdict names its **basis**: the material's solution, a computation, or
    both (§7.3).
-2. Exact arithmetic: supported rationals and exact surds are compared exactly; unit conversions
-   are exact. Approximate computations may produce a verdict only with certified rounding and
-   completeness where applicable (§9).
+2. Exact arithmetic: supported rationals, exact surds and bounded `a + bπ` forms are compared
+   exactly; unit conversions are exact. Approximate computations may produce a verdict only with
+   certified rounding and completeness where applicable (§9, §11).
 3. No model call, no I/O, no randomness.
 4. Imports no SDK and no catalog; text it returns to the model is in the course language, text for
    the student goes through the catalog (spec 010).
@@ -151,7 +151,7 @@ spec 022 share the same verdicts.
 7. Unreadable is not incorrect: the student is told the expected form with an example in the
    course's notation and answers again.
 
-### R3. Exercises bound to their checking data, and the `check_answer` tool
+### R3. Exercises bound to their checking data and direct answer submission
 
 As a student, I want my answer checked against the exercise I was actually given, so that the
 verdict is about that exercise and nothing else.
@@ -163,30 +163,40 @@ verdict is about that exercise and nothing else.
    stem and the one sub-question checked); for a variant, the task as the code reads it. An
    exercise whose checking data does not validate, or that needs a figure the card cannot show
    (§8.5), is shown without being checkable.
-2. `check_answer` takes the student's final answer and the recorded exercise's id (plus for
-   révision the chapter and section). It checks against that recorded exercise only; the verdict
-   belongs to that exercise and is shown on its card, wherever it is in the séance.
-3. **The answer is the student's**: the checker accepts only an unambiguously delimited answer
-   associated with the bound exercise. If uncertain, ask the learner; a substring match alone is
-   insufficient (§9). This applies to text, selections and voice.
-4. An unknown or uncheckable exercise id, an exercise marked as needing review (§7.4), or an
-   answer the code cannot settle (§7.5) gives no correct/incorrect verdict: the tool tells Célestin
-   to guide without one.
-5. Offered in the parcours and in révision; not in discussion. Declared after every existing tool.
-6. Returns the verdict and its basis to the model, never the key.
-7. Emits an event the board renders as a verdict mark on the bound exercise (correct, incorrect,
-   unreadable with the expected form, not reliably checkable), with its source in words; stored in
-   the transcript and replayed like every tool since spec 018 (`replay`, `shown`).
-8. Available in voice through `/api/voice/tool`, as every tool of the mode is.
+2. The server checks the confirmed submission against its recorded presentation, without a model
+   call. It returns the verdict and basis to the card and records the learner action and result
+   atomically; an unavailable checker gives no correct/incorrect verdict. A subsequent model turn
+   is optional for the verdict and cannot change it.
+3. **The answer is the student's**: a checkable card offers a final-answer field tied to the
+   exercise; choice selects its option on that card. Answers in chat are supported: the proposed
+   answer and exercise are shown for the learner to confirm or correct before checking. For voice,
+   show the recognized answer for confirmation or correction. The checker uses the learner's
+   confirmed submission, not a model-selected substring (§9, §10).
+4. Unknown, stale, unauthorized or uncheckable presentations, a key needing review, and answers
+   the code cannot settle give no correct/incorrect verdict. A retry of the same submission must not
+   produce a duplicate result; a new learner attempt remains a distinct submission.
+5. Direct checking is available in parcours and révision, not discussion. A model tool may propose
+   an exercise for confirmation, but cannot submit on the learner's behalf or choose a verdict.
+6. The tutor receives the committed verdict and its basis as context on its next turn; that
+   outcome contains no key. The board and transcript show the verdict on its original presentation
+   and restore it on reload; the result is not dependent on a successful later model turn.
+7. A presentation remains usable across an ordinary parcours séance rollover and section return
+   within the same owner, chapter, section and content version, provided it was actually stored and
+   remains eligible. Chapter edits, resets, deletion and a replaced révision invalidate it according
+   to the design; authorization and mode are checked every time.
+8. Available in voice where that mode supports voice, with the same confirmation and server-owned
+   presentation guarantees. Adding voice to révision, which currently has none, is outside this spec.
 
 ### R4. The tutor's rule changes with the checker
 
 As a student, I want Célestin to say « right » or « wrong » only when the code said so, so that I
 can rely on it.
 
-1. The tutor prompt (every course language) says: for a final answer to a checkable exercise, call
-   `check_answer` and say the verdict it returns, with its source; never declare a verdict without
-   it; for anything else, the current rule (no verdict, have the student check) holds.
+1. The tutor prompt (every course language) says: use the committed checker verdict and its source;
+   never declare a correct/incorrect verdict without one. For other answers the current rule
+   (guidance without a verdict) holds. Checker outcome context contains no key; the tutor's
+   existing course pack may already contain the material's solution and remains governed by the
+   no-answer-while-open rules.
 2. After `incorrect`, the usual tutoring applies: questions and hints, no answer.
 3. **Multiple choice** (§7.6): a choice card shows a correct/incorrect verdict only when it is bound
    to a `choice` key and the checker evaluated the pick. A choice card without such a key shows the
@@ -204,9 +214,10 @@ whole section.
    it belongs to (§7.7).
 2. A checker result does not set or change the section's self-assessed outcome (acquis, fragile,
    à revoir) and never marks a section as mastered; the self-assessment stays beside it.
-3. Recorded with the transcript when the turn ends, in one transaction, as `record_result` is
-   (spec 020 D6): a stopped or failed turn records nothing. « Not reliably checkable » and
-   « needs review » record nothing.
+3. The learner's confirmed submission, transcript entry and recordable checker result commit
+   atomically in the submission transaction. A later stopped or failed model turn does not erase
+   that committed learner action. `record_result` self-assessments retain spec 020 D6's model-turn
+   transaction. « Not reliably checkable » and « needs review » record no checker verdict.
 4. The « Bilan » and the révision's trailing state message show, per section, the latest
    self-assessment and the checked exercises with their latest verdict, source and date.
 5. Célestin still asks for the student's self-assessment after a question (spec 020 D3); the
@@ -219,18 +230,20 @@ whole section.
 ## 4. Non-functional requirements
 
 ### Architecture
-- Rules in code: the key, the binding, the verdict and the « answer is the student's » check are
-  enforced in the tools and the checker, not in prompt text.
+- Rules in code: the key, the binding, the verdict and learner confirmation are enforced in the
+  submission service and checker, not in prompt text.
 - Every per-language reader is a `by_language` table; a missing language fails at import.
 - French output of existing tools, prompts and renderings is byte-identical except where this spec
   changes it on purpose (tutor prompt rule, pack templates, the board's exercise and choice cards);
   `system_text_sha*` and declaration pins are regenerated deliberately.
-- Tool order stays fixed for the cached prefix; the new declaration goes last.
+- Existing tool order stays fixed for the cached prefix; any confirmation-proposal tool is
+  appended and cannot submit or grade an answer.
 - `test_language_is_passed.py`, `test_model_input_wall*.py` and `test_route_guards.py` cover the new
   code.
 
 ### Performance and cost
-- Checking is local and synchronous, well under a millisecond per answer; no extra model call.
+- Checking is local and bounded; exact algebra and root isolation must not block indefinitely.
+  No model call is required for the verdict.
 - Keys add a few lines per exercise to the pack and so to the cached prefix; no change to the turn
   loop.
 
@@ -357,3 +370,46 @@ The user agreed to the decisions recorded in `specs/023-review-followup.md`. The
 
 Implementation details and verification evidence for these decisions need design review before
 planning; the contract with spec 022 is deferred until that spec is resumed.
+
+## 10. Subsequent design review decisions
+
+The user agreed to the directions documented in `specs/023-design-proposal.md`:
+
+1. Use a dedicated answer field on the checkable card; bind choice selections to that card. Also
+   allow answers in chat, showing the proposed answer and exercise for confirmation or correction
+   before checking. For voice, show the recognized answer for confirmation or correction. The
+   detailed voice and accessibility interaction remains to be designed.
+2. Begin expression checking with cases where the relevant domain and equivalence can both be
+   determined exactly. Unsupported or uncertain cases have no verdict; the class can grow later.
+3. Require a complete, reliable set of solutions and unambiguous rounding before a verdict,
+   including for cubic and quartic equations.
+4. Store an explicitly marked review label with the pack exercise, show it in the revision
+   overview, and allow the learner to correct it. Do not infer the label from ambiguous material.
+5. Generate the checkable statement of a purely mathematical variant from its checking data. A
+   word problem whose agreement with those data cannot be reliably established can still be
+   posed and discussed without an automatic verdict.
+
+The draft's proposed algorithms, message contracts and implementation details remain for design
+review; these decisions do not approve an implementation plan.
+
+## 11. Reconciliation of Claude's review
+
+At the user's request the design incorporates `specs/023-review-claude.md` with these decisions:
+
+1. Direct server checking and atomic recording on confirmed submission replace the model's
+   `check_answer` call and the requirement to wait for a successful model turn. The existing
+   spec 020 transaction for self-assessments is unchanged. Confirmation, ownership and idempotency
+   remain required. A later model failure cannot erase an already committed learner action.
+2. Text-turn presentations become eligible only when stored with their card. Parcours rollover
+   and section return do not invalidate eligible presentations; resets, content changes, closed
+   revision runs and cross-user/cross-mode use do. Voice presentations are persisted by the trusted
+   server before submission and reconciled with the reported transcript. Voice checking remains in
+   scope; revision voice remains out of scope.
+3. A supported explicitly stated answer domain can be checked against the required domain; an
+   unsupported or ambiguous domain gives no verdict. Certified algebraic root rounding must
+   establish the relevant root and rounding boundary exactly; resource exhaustion is inconclusive.
+   Exact supported surds and bounded rational linear forms in π cover common geometry cases;
+   rounding π requires certified rational bounds, and unsupported forms give no verdict.
+4. Work may be phased, but chat, voice confirmation, revision results and review labels remain in
+   scope. `specs/023-review-claude.md` retains the original review; the updated design still needs
+   review before a task plan or implementation.
