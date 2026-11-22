@@ -1,7 +1,8 @@
 # Spec 023 — Answer checker: design
 
-Requirements: `requirements.md` (owner's decisions §6, review decisions §7). Revised after the
-review in `specs/023-review.md`. Builds on specs 005 (pack), 008/009 (board, expression grammar),
+Requirements: `requirements.md` (owner's decisions §6, review decisions §7, textbook decisions
+§8). Revised after the review in `specs/023-review.md`, then after the textbook check (D11
+revised, D12–D16). Builds on specs 005 (pack), 008/009 (board, expression grammar),
 011/017/021 (course languages), 018 (stored tool entries), 020 (révision record). The
 implementation branch must start from a branch that has spec 021's code (German rows): every
 per-language table below has an `fr`, `en`, `nl` and `de` row.
@@ -67,10 +68,38 @@ New, from the review decisions:
   from `check_answer`. Stored cards replay without a verdict; the cahier no longer reveals an option.
 - **D10. Révision results per exercise** in a new table `exercise_results`; `revision_results` and
   the section outcome logic of spec 020 are untouched.
-- **D11. Rounding rule semantics**: with `round d`, the key is the material's rounded value;
-  `correct` iff the answer equals it exactly; `precision` iff the answer is the same value rounded
-  differently (more decimals that round to the key, or fewer decimals the key rounds to); else
-  `incorrect`. With `±t`: `correct` iff `|a − k| ≤ t`. Without either: exact equality only.
+- **D11. Rounding rule semantics** (revised after the textbook check, requirements §8.1): a key
+  is `exact`, `±t`, `round d` (d may be negative: −1 tens, −2 hundreds) or `approx` (the material
+  wrote `≈`, « rund », « ca. », or a governing note or « Runde sinnvoll » applies; `d` = the key's
+  own decimals). Under `round d` / `approx`: `correct` iff the answer, rounded to `d` (half away from
+  zero, exact arithmetic), equals the key and has at least `d` decimals; `precision` iff it has
+  fewer decimals and the key rounded to the answer's decimals equals it; else `incorrect`. With
+  `±t`: `correct` iff `|a − k| ≤ t`. `exact`: equality only.
+
+New, from the textbook check:
+
+- **D12. Exact surds.** A number value is a `Fraction` or a `Surd` `a + b√c` (a, b rational, c a
+  square-free integer ≥ 2), read from `2√2`, `−3 + √2`, `√11`, `(3 + √2) cm`, compared exactly. The
+  real roots of a quadratic factor are returned in that form, so most grade 9 quadratics are
+  checkable without a rounding rule. Roots that are not of that form (cubic, quartic, `x⁵ = 7`)
+  still need a rounding rule.
+- **D13. Required unit or form** (`form` on the key): `unit` (the answer's unit must be the key's
+  written unit), `fraction`, `reduced` (lowest terms), `mixed`, `decimal`, `scientific`, `power`
+  (a single power `aⁿ`). A right value in another unit or form gives `form_differs`. For
+  `expression`, a form flag (`vertex`, `factored`, `expanded`) is not checked: a right value gives
+  `form_unchecked`, which is shown and never recorded.
+- **D14. Statement cut and figures.** The bound statement is the exercise's shared stem plus the
+  one sub-item checked (other sub-items left out). An exercise whose pack text carries a figure
+  mark (`[Abbildung: …]`, the transcription's mark) or a measuring operator (« Miss ») is not
+  bindable: the card is shown unbound with the reason `figure`.
+- **D15. More equation classes for tasks**: equations with the variable in a denominator (cleared
+  by multiplying by the denominators' product; solutions that zero a denominator are removed, the
+  Definitionsbereich) and pure powers `x^n = c` (integer `n ≠ 0`; exact when `c` is an exact n-th
+  power or n = ±2 with a surd; otherwise only with a rounding rule).
+- **D16. Textbook authoring.** Pack exercise headings carry the material's reference:
+  `#### 6.1.2 (S. 128, Nr. 11)`; appendix solutions are joined to their exercise by page, number
+  and sub-letter; answer pools are never keys and never copied into a statement; the `mapping` kind
+  covers « Ordne zu »; a sub-answer with several quantities gets named key parts.
 
 ## 2. Architecture
 
@@ -118,36 +147,42 @@ can use them: `NUMBER`, `_decimal_comma`, `_thousands_comma`, `_german_number`, 
 ### 3.2 `app/domain/answers/kinds.py`
 
 ```python
-Kind = Literal["choice", "number", "expression", "interval", "set", "point", "word"]
-Rational = Fraction
+Kind = Literal["choice", "number", "expression", "interval", "set", "point", "word", "mapping"]
 
+@dataclass(frozen=True) class Surd:        a: Fraction; b: Fraction; c: int   # a + b√c, c square-free ≥ 2
+Exact = Fraction | Surd                    # a Surd with b = 0 is normalised to its Fraction
 @dataclass(frozen=True) class Unit:        dimension: str; factor: Fraction; symbol: str
-@dataclass(frozen=True) class Rule:        round: int | None = None; tolerance: Fraction | None = None
-                                           # at most one of them; none = exact
-@dataclass(frozen=True) class Quantity:    value: Fraction; decimals: int; unit: Unit | None
+@dataclass(frozen=True) class Rule:        mode: Literal["exact", "tolerance", "round", "approx"] = "exact"
+                                           tolerance: Fraction | None = None; round: int | None = None  # D11
+Form = Literal["unit", "fraction", "reduced", "mixed", "decimal", "scientific", "power",
+               "vertex", "factored", "expanded"]                                       # D13
+@dataclass(frozen=True) class Quantity:    value: Exact; decimals: int; unit: Unit | None
+                                           written: str   # the form it was written in (for D13)
 @dataclass(frozen=True) class Bound:       value: Fraction | None; closed: bool   # None = ±∞, never closed
 @dataclass(frozen=True) class Interval:    low: Bound; high: Bound
 
 @dataclass(frozen=True) class ChoiceKey:     option: str; options: tuple[str, ...]
-@dataclass(frozen=True) class NumberKey:     quantity: Quantity; rule: Rule
-@dataclass(frozen=True) class ExpressionKey: function: RationalFunction; variable: str  # see 3.6
+@dataclass(frozen=True) class NumberKey:     quantity: Quantity; rule: Rule; form: Form | None
+                                             remainder: Fraction | None = None   # « 4 Rest 7 »
+@dataclass(frozen=True) class ExpressionKey: function: RationalFunction; variable: str; form: Form | None
 @dataclass(frozen=True) class IntervalKey:   union: tuple[Interval, ...]; rule: Rule
-@dataclass(frozen=True) class SetKey:        values: tuple[Fraction, ...]; rule: Rule   # sorted, distinct
-@dataclass(frozen=True) class PointKey:      coords: tuple[Fraction, ...]; rule: Rule
+@dataclass(frozen=True) class SetKey:        values: tuple[Exact, ...] | Literal["reals"]; rule: Rule
+@dataclass(frozen=True) class PointKey:      coords: tuple[Exact, ...]; rule: Rule
 @dataclass(frozen=True) class WordKey:       words: tuple[str, ...]; accents: bool
-Key = ChoiceKey | NumberKey | ExpressionKey | IntervalKey | SetKey | PointKey | WordKey
+@dataclass(frozen=True) class MappingKey:    pairs: frozenset[tuple[str, str]]
+Key = ChoiceKey | NumberKey | ExpressionKey | IntervalKey | SetKey | PointKey | WordKey | MappingKey
 
 Basis = Literal["material", "computed", "both"]
 Verdict = Literal["correct", "incorrect", "unreadable", "precision", "unit_differs",
-                  "undecided"]                      # undecided = not reliably checkable
+                  "form_differs", "form_unchecked", "undecided"]   # undecided = not reliably checkable
 @dataclass(frozen=True) class Checked:
     verdict: Verdict; kind: Kind; basis: Basis
     expected: str | None   # `unreadable`: an example of the expected form, course notation
     reason: str | None     # `undecided`: a reason code (`expression_class`, …)
 ```
 
-Recorded verdicts (révision, spec 022): `correct`, `incorrect`, `precision`, `unit_differs`.
-`unreadable` and `undecided` are never recorded.
+Recorded verdicts (révision, spec 022): `correct`, `incorrect`, `precision`, `unit_differs`,
+`form_differs`. `unreadable`, `form_unchecked` and `undecided` are never recorded.
 
 ### 3.3 `app/domain/answers/readers.py`
 
@@ -157,16 +192,19 @@ a student's answer. Each returns a value or `None` (unreadable). Every number is
 
 | Kind | Accepts (de shown; fr/nl like de with `;`, en with `,` and `.`) | Notes |
 | --- | --- | --- |
-| number | `374`, `12,5`, `12.500`, `10 000`, `3/4`, `−2`, `12,5 %`, `25 m/s`, `x = 3` | `NUMBER[lang]`; trailing unit via `units.py`; leading `<name> =` stripped |
+| number | `374`, `12,5`, `12.500`, `10 000`, `3/4`, `2 1/4`, `0,1̄` / `0,\overline{1}`, `−2`, `12,5 %`, `25 m/s`, `x = 3`, `2√2`, `(3 + √2) cm`, `1,15 · 10⁴` / `1,15 · 10^4`, `4 Rest 7`, « nicht definiert » | `NUMBER[lang]`; space grouping only for groups of exactly three digits, so `2 1/4` is a mixed number; trailing unit via `units.py`; leading `<name> =` stripped; the written form kept for D13 |
 | expression | `2(x+1)`, `2x+2`, `f(x) = x^2` | `expression.parse(src, frozenset({variable}))`, then `algebra.py`; leading `f(x) =`/`y =` stripped; decimal comma → point in comma languages (`1,5x`) |
-| interval | `]2 ; 5]`, `]−∞ ; 3[ ∪ ]4 ; +∞[`, `x > 2` (one-sided only), `L = ]2 ; 5]` | `[−∞ …` refused (∞ never closed); `∞`, `inf`, `unendlich` |
-| set | `{−1; 3}`, `L = {−1; 3}`, `x = −1 oder x = 3`, `x₁ = −1; x₂ = 3`, `{}` / `∅` / `L = { }` | `SET_SEPARATOR[lang]`, `JOINERS[lang]` (de `oder`/`und`; fr `ou`/`et`; nl `of`/`en`; en `or`/`and`) |
+| interval | `]2 ; 5]`, `[3; 4]`, `]−∞ ; 3[ ∪ ]4 ; +∞[`, `x > 2` (one-sided only), `L = ]2 ; 5]` | `[−∞ …` refused (∞ never closed); `∞`, `inf`, `unendlich` |
+| set | `{−1; 3}`, `L = {−1; 3}`, `L = {1 − √7; 1 + √7}`, `x = −1 oder x = 3`, `x₁ = −1; x₂ = 3`, `x₁ = −1,5, x₂ = 0,5` (anchored on the indexed names), `x = ±3`, `{}` / `∅` / `L = { }`, « keine Lösung », `L = ℝ` | `SET_SEPARATOR[lang]`, `JOINERS[lang]` (de `oder`/`und`; fr `ou`/`et`; nl `of`/`en`; en `or`/`and`), `NO_SOLUTION[lang]` |
 | point | `P(2 \| −1,5)`, `(2 \| −1,5)`, `(2; −1,5)` (de); `(2, −1.5)` (en) | `COORDS[lang]` plus a value reader; leading name stripped |
 | word | any text | NFKC, casefold, collapse spaces; accents stripped unless the key says `accents` |
-| choice | `B`, `b)`, `Antwort B`, `(b)` | one option id among the key's `options`, case-insensitive |
+| choice | `B`, `b)`, `Antwort B`, `(b)`, `richtig` / `falsch` | one option id among the key's `options`, case-insensitive; `TRUE_FALSE[lang]` words for a richtig/falsch item (a reason after it is ignored) |
+| mapping | `A–2, B–1`, `A2 B1`, `A → 2; B → 1` | pairs of ids, any order |
 
-Normalisation before every reader: NFKC, `−`/`–` → `-`, `·`/`×` kept for expressions, surrounding
-`$…$` stripped (`text.MATH`), trailing `.` stripped.
+Normalisation before every reader: NFKC (`ℓ` → `l`), `−`/`–` → `-`, `·`/`×`/`:`/`÷` kept for
+expressions, surrounding `$…$` stripped (`text.MATH`), trailing `.` stripped. A leading `≈`, `~`,
+« rund », « ca. », « etwa » (`APPROX_WORDS[lang]`) is stripped and noted; it changes nothing under
+an `exact` key.
 
 ### 3.4 `app/domain/answers/units.py`
 
@@ -174,13 +212,16 @@ Normalisation before every reader: NFKC, `−`/`–` → `-`, `·`/`×` kept for
 
 - length: mm, cm, dm, m, km; mass: mg, g, kg, t; time: s, min, h; speed: m/s, km/h (factor 5/18;
   aliases `m·s^-1`, `km·h^-1`); volume: mL/ml, cL/cl, dL/dl, L/l, cm³, dm³, m³ (`cm^3`); area: mm²,
-  cm², dm², m², km², a, ha; percent: `%` (dimensionless, factor 1/100).
+  cm², dm², m², km², a, ha; percent: `%` (dimensionless, factor 1/100); money: €, ct (factor 1/100);
+  time adds d (days); temperature: °C (no conversion; equal only to °C).
 - Same dimension → the answer is converted **exactly into the key's unit**, then compared under
   the key's rule (a rounding rule applies in the key's unit).
 - Different dimension, or a unit outside the table that differs from the key's written unit →
   `unit_differs`. Key with a physical unit, answer without → `unit_differs`; key without a unit,
   answer with a physical one → `unit_differs`.
 - `%`: `12,5 %` and `0,125` are equal in either direction.
+- A key with `form unit` (D13): the answer's unit must be the key's written unit; the right value
+  in another unit of the same dimension is `form_differs`.
 
 ### 3.5 `app/domain/answers/check.py`
 
@@ -188,16 +229,20 @@ Normalisation before every reader: NFKC, `−`/`–` → `-`, `·`/`×` kept for
 def check(key: Key, answer: str, language: CourseLanguage, basis: Basis) -> Checked
 ```
 
-- **number**: read; units (3.4); then the rule (D11): exact `==`; `±t`; or `round d` with
-  `precision`.
+- **number**: read; units (3.4); then the rule (D11); a right value whose unit or written form
+  differs from a required `form` is `form_differs` (D13); `remainder` keys compare both parts.
+  Surds compare exactly; under `round`/`approx` a surd answer is evaluated to float only for the
+  rounding test.
 - **expression**: both to `RationalFunction` (3.6); either outside the class → `undecided`
-  (`expression_class`); else `n₁·d₂ == n₂·d₁` → correct, else incorrect.
+  (`expression_class`); else `n₁·d₂ == n₂·d₁` → correct (`form_unchecked` when the key has a
+  form), else incorrect.
 - **interval**: unions normalised (sorted, merged); bounds compared under the rule (exact by
   default), closedness equal.
 - **set**: same size, pairwise equal under the rule; duplicates in the answer ignored.
 - **point**: same dimension, coordinates equal under the rule.
 - **word**: normalised answer equals one of `words`.
 - **choice**: the id is one of `options` (else unreadable), then equal ids.
+- **mapping**: same set of pairs; an answer naming an unknown id is unreadable.
 
 Never raises on student input (fuzz test).
 
@@ -211,11 +256,14 @@ Never raises on student input (fuzz test).
   another variable → `None`. Caps: degree ≤ 24, numerator/denominator ≤ 64 coefficients, each
   coefficient's numerator and denominator ≤ 10¹² → else `None`.
 - `evaluate_exact(rf, x: Fraction) -> Fraction | None` (`None` where the denominator is 0).
-- `real_roots(p: Polynomial, degree 1–4) -> Roots(rational: tuple[Fraction, ...],
-  irrational: tuple[float, ...])`: integer-scaled coefficients; rational root theorem on the
-  divisors (coefficients ≤ 10⁶ in absolute value, else `None`), deflation by each rational root;
-  the remaining factor (degree ≤ 4): closed form for degree ≤ 2, Durand–Kerner then Newton polish
-  for 3–4, imaginary parts `< 1e−9` dropped, each irrational root verified by sign change. No numpy.
+- `real_roots(p: Polynomial, degree 1–4) -> Roots(exact: tuple[Exact, ...],
+  approximate: tuple[float, ...])`: integer-scaled coefficients; rational root theorem on the
+  divisors (coefficients ≤ 10⁶ in absolute value, else `None`), deflation by each rational root; a
+  remaining quadratic factor gives two surds exactly (`(−b ± √D)/2a`, `D` reduced to `k²·c`); a
+  remaining factor of degree 3–4 without rational roots: Durand–Kerner then Newton polish,
+  imaginary parts `< 1e−9` dropped, each root verified by sign change. No numpy.
+- `Surd` arithmetic: `+`, `−`, `×` by rational, comparison (exact, by squaring with signs),
+  `float()`; parsing `√n` reduces `n` to `k²·c`.
 
 ### 3.7 `app/domain/answers/variants.py`: tasks
 
@@ -234,13 +282,18 @@ def task_text(task: Task, rule: Rule, language) -> str    # the line the card sh
   only with `round d`: `expression.evaluate` in float, the key is the value rounded to `d`
   decimals; if the value is within `1e−9` of a rounding boundary → `NotCheckable("boundary")`.
   Division by zero → `NotCheckable("undefined")`.
-- `Solve`: split on the single top-level relational operator; `left − right` must be a polynomial
-  (rational function with constant denominator) of degree 1–4 (D3); `real_roots`.
+- `Solve`: split on the single top-level relational operator; `left − right` as a
+  `RationalFunction` `n/d`:
+  - `d` constant: a polynomial of degree 1–4 (D3), `real_roots(n)`;
+  - `d` not constant (D15): `=` only: `real_roots(n)` minus the roots of `d` (the
+    Definitionsbereich); inequalities with the variable in a denominator → `NotCheckable("degree")`;
+  - pure power `x^n = c` (D15): exact roots when `c` is an exact n-th power, or `n = ±2` (surds);
+    otherwise approximate roots.
   - `=`: `SetKey(roots)`; `kind == "number"` only with exactly one real root.
   - `<`, `>`, `≤`, `≥`: `IntervalKey` from the sign of the polynomial on each piece (tested exactly
     at a rational point inside the piece).
-  - Any irrational root (or bound) requires `round d`, applied to it; otherwise
-    `NotCheckable("irrational")`.
+  - Any approximate root (or bound) requires `round d`, applied to it; otherwise
+    `NotCheckable("irrational")`. Surd roots need no rule.
 - Reasons: `not_polynomial`, `degree`, `variables`, `parse`, `kind_mismatch`,
   `no_unique_number`, `irrational`, `boundary`, `undefined`, `size`.
 
@@ -256,16 +309,22 @@ Line form, under an exercise's `#### N.M.K` heading, after its answer line:
 - `<sub>`: a sub-question label, `a)`, `b)`, `1)`, …; absent for a single answer.
 - `<kind>`: the fixed identifiers of `Kind` (language-neutral; never said aloud). `set` is the
   requirements' `solution_set`.
-- `<rule>`: `round <d>` or `±<tolerance>` (number, interval, set, point), only when the exercise
-  states it; word: alternatives separated by ` / `, `accents` flag; choice: `of <ids>` lists the
-  exercise's option ids.
+- `<key>` may start with `≈` (the material marked it rounded): rule `approx` (D11).
+- `<rule>`: `round <d>` (d may be negative) or `±<tolerance>` (number, interval, set, point), when
+  the exercise or a governing note states it; `form <form>` (D13); word: alternatives separated by
+  ` / `, `accents` flag; choice: `of <ids>` lists the exercise's option ids (`of richtig falsch` for
+  a true/false item).
+- Named parts (D16): `**Schlüssel a) u:** number ≈ 51,05 mm` and `**Schlüssel a) A:** …` give the
+  refs `6.1.2 a) u` and `6.1.2 a) A`.
 - `<task>`: `solve <relation>` or `eval <expression> at <variable> = <value>`, copied from the
   statement; optional.
 - Examples (de): `**Schlüssel:** number 374` · `**Schlüssel:** number 25 m/s` ·
   `**Schlüssel:** number 3,14 round 2` · `**Schlüssel a):** interval ]2 ; 5]` ·
   `**Schlüssel b):** set {2; 3} | solve x^2 - 5x + 6 = 0` · `**Schlüssel:** point P(2 | −1,5)` ·
   `**Schlüssel:** expression x 2(x+1)` · `**Schlüssel:** word Hypotenuse` ·
-  `**Schlüssel:** choice B of A B C D`.
+  `**Schlüssel:** choice B of A B C D` · `**Schlüssel c):** number ≈ 3,84 cm` ·
+  `**Schlüssel:** number 300 dm² form unit` · `**Schlüssel b):** set {−3 + √2; −3 − √2}` ·
+  `**Schlüssel:** number 2 1/4 form mixed` · `**Schlüssel:** mapping A–2, B–1, C–3`.
 
 ```python
 ExerciseRef = str   # "6.1.2" or "6.1.2 a)"
@@ -282,9 +341,11 @@ def exercise_statement(markdown: str, ref: ExerciseRef, language) -> str | None
   the class of 3.6) (catalog keys in fr/en/nl/de, `render_issue`).
 - With a task: `task_key` computed and compared with the stored key under the key's rule → status
   `agrees` (basis `both`) or `needs_review` (no verdict, D7). No task → `material`.
-- `exercise_statement`: the lines under the exercise's heading up to the first line starting with
-  `ANSWER_LABEL[lang]` (the templates' answer label, `**Antwort:**` etc.) or `KEY_LABEL[lang]`;
-  `None` when neither line is found (the statement cannot be cut from its solution).
+- `exercise_statement(…, ref)`: the lines under the exercise's heading up to the first line
+  starting with `ANSWER_LABEL[lang]` (the templates' answer label, `**Antwort:**` etc.) or
+  `KEY_LABEL[lang]`; for a sub-question ref, the stem (lines before the first sub-item label) plus
+  that sub-item's lines only (D14); `None` when the cut is not found, or when the text carries a
+  figure mark or a measuring operator (`MEASURE_WORDS[lang]`: « Miss », « miss … nach »).
 - `index_pack` calls `pack_keys` and returns its issues; `PackIndex` gains
   `keys: frozenset[ExerciseRef]`.
 
@@ -380,7 +441,10 @@ correct/computed « Nachgerechnet: richtig. »; incorrect « Stimmt nicht mit de
 überein. » / « Nachgerechnet: nicht richtig. », then « Verrate die Lösung nicht; arbeite mit Fragen
 und Hinweisen weiter. »; unreadable « Nicht als {kind_word} lesbar. Bitte um die Antwort in der
 Form {expected}. »; precision « Der Wert stimmt, ist aber nicht so gerundet, wie die Aufgabe es
-verlangt ({decimals} Nachkommastellen). »; unit_differs « Die Einheit passt nicht. »; undecided
+verlangt ({decimals} Nachkommastellen). »; unit_differs « Die Einheit passt nicht. »;
+form_differs « Der Wert stimmt, aber nicht in der Einheit oder Form, die die Aufgabe verlangt. »;
+form_unchecked « Der Wert stimmt; die verlangte Form prüft der Prüfer nicht: schau sie mit deinem
+Gegenüber an. »; undecided
 « Das kann der Prüfer nicht sicher entscheiden: begleite ohne Urteil. »
 
 Registry row: `name="check_answer"`, `strict=True`, declared **after `record_result`**;
@@ -406,7 +470,7 @@ Description (French, as all declarations): « Fais vérifier par le code la rép
 - Migration `0015_exercise_results`: table `exercise_results`
   `(id, user_id, course_id, chapter_id, section_id, conversation_id, exercise_ref String(16) NULL,
   task String(200) NULL, kind String(12), verdict String(12), basis String(8), created_at)`,
-  check constraints on `verdict in ('correct','incorrect','precision','unit_differs')` and
+  check constraints on `verdict in ('correct','incorrect','precision','unit_differs','form_differs')` and
   `basis`, exactly one of `exercise_ref` / `task`; FKs and cascades as `revision_results`
   (deleted with the account, course, chapter). Index `(user_id, course_id, chapter_id)`.
 - `revision.turn_results` also collects `check_answer` entries with a recordable verdict; written
@@ -440,7 +504,12 @@ Description (French, as all declarations): « Fais vérifier par le code la rép
   line per answer, from the solution only; a rule only when the exercise states one; a task only
   when the statement gives one of the two forms; not for « not corrected », §7, or other kinds)
   with the examples of 3.8.
-- `prompts/authoring/pack.<lang>.md`: the same rule; « copy, never compute ».
+- `prompts/authoring/pack.<lang>.md`: the same rule; « copy, never compute »; and for textbooks
+  (D16): keep each exercise's reference in its heading (`#### 6.1.2 (S. 128, Nr. 11)`); join a
+  solution printed elsewhere to its exercise by page, number and sub-letter; never turn an
+  unordered answer pool into keys and never copy it into a statement; write `≈` on a key the
+  material marks rounded and the rule of a governing note on each key it governs; keep the
+  transcription's figure marks in the statement.
 - Repair: key issues are repaired like other pack issues (bounded). If the last attempt still has
   only key issues, the runner drops those key lines and appends one §7 item per dropped key
   (`DROPPED_KEY[lang]`), then accepts the pack. `needs_review` is not an issue: the key stays, the
@@ -508,7 +577,12 @@ Description (French, as all declarations): « Fais vérifier par le code la rép
   fractions, empty set, unions, ∞, leading names, garbage → unreadable, expressions outside the
   class → undecided.
 - `test_algebra.py`: expansion, rational normalisation, `n₁·d₂ = n₂·d₁`, caps, exact roots, rational
-  root theorem, irrational roots, repeated roots, no real root.
+  root theorem, surd roots of quadratics, approximate roots, repeated roots, no real root, surd
+  arithmetic and comparison, rational equations with excluded values, pure powers.
+- Textbook-shaped rows in `answer_cases.json` (written by us, no excerpts): `≈ 3,84 cm` against
+  `3,8 cm` / `3,84 cm` / `3,842 cm`; `round -1`; `2 1/4` vs `21/4`; `0,1̄` = `1/9`; `−3 + √2`;
+  `form unit` with `3 m²` vs `300 dm²`; `form scientific`; `4 Rest 7`; `x₁ = −1,5, x₂ = 0,5`;
+  « keine Lösung » = `L = { }`; mapping in any order; « richtig, weil … ».
 - `test_variants.py`: every reason; `round` boundary guard; inequalities.
 - `test_pack_keys.py`: key lines per language, rules, tasks, `agrees` / `needs_review`,
   `exercise_statement` cut (answer line never included), issue codes; `test_issue_messages.py`.
@@ -566,4 +640,12 @@ Description (French, as all declarations): « Fais vérifier par le code la rép
    Célestin says it in speech instead. Acceptable?
 4. **Contract with spec 022**: proposed: 022 sets its items as bound exercises (3.9), checks them
    with `check()` directly (no tool call), records them in `exercise_results` with the test's id,
-   and treats `undecided` and unbound items as self-assessed. To be settled when 022 is designed.
+   and treats `undecided`, `form_unchecked` and unbound items as self-assessed. To be settled when
+   022 is designed.
+5. **Review pages** (« Dein Fundament », about half of a textbook's solved exercises, earlier
+   grades): mark them in the pack (a §6 group « Wiederholung ») so their results are listed apart
+   in the Bilan, or treat them like any exercise?
+6. **Figures (D14)**: no verdict for a figure-dependent exercise is the safe choice but leaves most
+   geometry unchecked. A later spec could bind such an exercise with a drawing the pack describes
+   (`[Abbildung: …]` made into a board drawing) once the drawing itself can be checked against the
+   material.

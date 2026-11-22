@@ -2,8 +2,9 @@
 
 Status: requirements written at the owner's request (22 November 2026), open questions answered
 by the owner (§6), then revised after a review the owner did with another assistant
-(`specs/023-review.md`, decisions in §7; they supersede §6.4 and design proposal D2).
-Foundation of spec 022 (practice test).
+(`specs/023-review.md`, decisions in §7; they supersede §6.4 and design proposal D2), then
+checked against two NRW textbooks (decisions in §8; §8.1 refines §7.1). Foundation of spec 022
+(practice test).
 
 ## 1. Introduction
 
@@ -33,21 +34,28 @@ answer key and returns a verdict, with no model judging the answer. It adds:
 Value: the product's principle « it never grades from impression » holds for every answer the
 code can check, and the révision record gains verdicts the student can trust.
 
+Expected coverage (textbook check, §8): a German Gymnasium textbook prints solutions only for its
+self-test and review pages, about a quarter of its exercises; of those, about half to
+three-fifths of the sub-answers in algebra and a third in geometry are of a checkable kind.
+Variants settled by code (§1.2) carry the rest of the practice.
+
 ### 1.1 Answer kinds
 
 | Kind | Key form (illustrative; the design fixes it) | Verdict |
 | --- | --- | --- |
 | `choice` | option id, among the exercise's option ids | equal |
-| `number` | value, optional explicit tolerance or rounding rule, optional unit | exactly equal (after the built-in unit conversions); a tolerance or rounding rule only when the exercise states it (§7.1) |
-| `expression` | expression in the grammar of `domain/expression.py`, variable | equivalent, only where the code can establish it for the expression's class (§7.5); otherwise « not reliably checkable » |
+| `number` | value (decimal, fraction, mixed number, repeating decimal, exact root form `a + b√c`, power of ten), optional rule, optional unit, optional required form | exactly equal (after the built-in unit conversions); a rounding rule when the exercise states it or the material marks the solution as rounded (§7.1, §8.1); a required unit or form when the exercise asks for one (§8.3) |
+| `expression` | expression in the grammar of `domain/expression.py`, variable | equivalent, only where the code can establish it for the expression's class (§7.5); otherwise « not reliably checkable »; a required form (« Scheitelpunktform ») is not checked and said so (§8.3) |
 | `interval` | bounds and open/closed ends, or a union of intervals | same bounds and ends |
-| `solution_set` | finite set of numbers | same set, order and repetition ignored |
+| `solution_set` | finite set of numbers (exact root forms included), the empty set, `ℝ` | same set, order and repetition ignored |
 | `point` | coordinates | same coordinates |
 | `word` | one or several accepted words from the pack's vocabulary (pack §5) | equal after normalising case, spaces, accents (accents configurable per subject: a language course may require them) |
+| `mapping` | pairs (« Ordne zu »: `A–2, B–1`) | same pairs |
 
 Every kind reads the student's text in the **course's** notation (`by_language` tables): decimal
 comma or point, thousands grouping, `]a ; b[` or `(a, b)`, `P(2 | −1,5)` or `(2, −1.5)`, `%`.
-Fractions and decimals of the same value are equal (`3/4` = `0,75`).
+Fractions and decimals of the same value are equal (`3/4` = `0,75`) unless the exercise asks for
+a form (§8.3). An answer may carry `≈`, « rund » or « ca. » before it.
 
 ### 1.2 Variants: settled by code
 
@@ -56,7 +64,8 @@ accepts it only when code can settle the answer itself:
 
 - **Evaluate**: the item is an expression to compute at given values → the code computes the key.
 - **Solve**: the item is an equation or inequality of a class the code can solve completely (the
-  design fixes the class) → the code computes the full solution and checks the answer against it.
+  design fixes the class: polynomial, rational with the variable in a denominator, pure power
+  `x^n = c`) → the code computes the full solution and checks the answer against it.
 - **Anything else** (a derivation, a proof, a word problem whose relation the item does not state)
   is not a checkable variant: Célestin guides as today, without a verdict.
 
@@ -90,12 +99,19 @@ answers to the course's exercises get a reliable verdict.
    asks, per typical exercise, for its answer kind and key in the fixed form, next to the
    existing « Antwort » / « Réponse » line, when the material gives a solution.
 2. An exercise with several questions carries one key per sub-question, each with its own id
-   (e.g. `6.1.2 a)`).
+   (e.g. `6.1.2 a)`); a sub-answer with several quantities carries one key per named part
+   (`6.1.2 a) u`, `6.1.2 a) A`).
 3. No key is written for an exercise whose material gives no solution, whose solution the agent
    flagged in « points to check » (pack §7), or whose answer is not of a kind of §1.1.
 4. The authoring agent copies the key from the material's solution; it does not compute a key
-   the material does not give. A tolerance or rounding rule is written only when the exercise
-   states one (§7.1).
+   the material does not give. A rounding rule is written when the exercise or a note governing
+   it states one, or when the solution is marked `≈`, « rund » or « ca. » (§8.1); a required unit or
+   form when the exercise asks for one (§8.3).
+4a. Textbooks (§8.4): each pack exercise keeps the material's reference (« S. 128, Nr. 11 »);
+   solutions printed elsewhere (an appendix) are joined to their exercise by that reference; an
+   unordered pool of answers (« Lösungen zu 5 ») never becomes a key and is never copied into an
+   exercise's statement. An exercise that needs a figure or a measurement on the page is marked so
+   (§8.5).
 5. Where the exercise's task is of a class the code can compute (§1.2), the key line may also
    carry that task in the fixed form, copied from the statement, so the code can recompute the
    solution (§7.3, §7.4).
@@ -116,9 +132,10 @@ spec 022 share the same verdicts.
 
 1. Input: answer kind, key (from the pack or computed for a variant), the student's answer text,
    the course language. Output: `correct`, `incorrect`, `unreadable` with the expected form; for
-   `number` also `unit_differs`, and `precision` (right value, not rounded as the exercise asks)
-   when the key carries a rounding rule; or **not reliably checkable** when the code cannot settle
-   the answer (§7.5). Every verdict names its **basis**: the material's solution, a computation, or
+   `number` also `unit_differs`, `form_differs` (right value, not in the unit or form the exercise
+   asks, §8.3), and `precision` (right value, not rounded as the rule asks) when the key carries a
+   rounding rule; for `expression` with a required form, `form_unchecked` (value right, form not
+   checked, §8.3); or **not reliably checkable** when the code cannot settle the answer (§7.5). Every verdict names its **basis**: the material's solution, a computation, or
    both (§7.3).
 2. Exact arithmetic: numbers read from keys and answers are exact rationals; unit conversions are
    exact; floating point is used only where a rounding rule is stated.
@@ -141,9 +158,10 @@ verdict is about that exercise and nothing else.
 1. **Binding** (§7.2): when Célestin puts a checkable exercise on the board, it names its checking
    data (a pack exercise reference, or a variant's task). The server validates it, records the
    exercise with an id and its checking data in the séance's stored entries, and shows the
-   student what is checked: for a pack exercise, the exercise as the pack states it; for a
-   variant, the task as the code reads it. An exercise whose checking data does not validate is
-   shown without being checkable.
+   student what is checked: for a pack exercise, the exercise as the pack states it (its shared
+   stem and the one sub-question checked); for a variant, the task as the code reads it. An
+   exercise whose checking data does not validate, or that needs a figure the card cannot show
+   (§8.5), is shown without being checkable.
 2. `check_answer` takes the student's final answer and the recorded exercise's id (plus for
    révision the chapter and section). It checks against that recorded exercise only; the verdict
    belongs to that exercise and is shown on its card, wherever it is in the séance.
@@ -238,7 +256,9 @@ whole section.
   exercises.
 - Checking working steps, derivations, proofs, justifications, drawn graphs.
 - A general computer algebra system: only the expression and equation classes the design names.
-- Required forms for `expression` (« factorised », « simplified »): §6.2.
+- Checking required forms of `expression` answers (« factorised », « Scheitelpunktform »): §6.2;
+  the value is checked and the form is said to be unchecked (§8.3).
+- Exercises that depend on a figure or a measurement on the page (§8.5).
 - Graded class test analysis and correction review (follow-ups named in spec 022).
 
 ## 6. Decisions on the open questions (owner, 22 November 2026)
@@ -257,7 +277,8 @@ whole section.
 
 1. **Numbers are exact by default.** A key of `5` accepts `5` and `5,0`, not `5,4`. A tolerance or
    rounding rule applies only when the exercise or its key states it; `precision` exists only
-   under such a rule. Applies to converted units too (`90 km/h` = `25 m/s` exactly).
+   under such a rule. Applies to converted units too (`90 km/h` = `25 m/s` exactly). Refined by
+   §8.1: a solution the material marks as rounded states its own rule.
 2. **An answer is bound to its exercise.** The server records a checkable exercise with its id and
    checking data when it is presented; the check uses that record, and the verdict belongs to that
    exercise, not to whichever card is latest. Checking data that cannot be reliably associated
@@ -282,3 +303,33 @@ whole section.
 Open after the review: the exact contract with spec 022, and the implementation details of the
 binding, multiple choice, result storage, conflict handling and equivalence classes; the design
 proposes them for the owner's review.
+
+## 8. Decisions after the textbook check (owner, 22 November 2026)
+
+Evidence: Cornelsen's *Fundamente der Mathematik* NRW, grades 5 and 9, supplied by the owner and
+not stored in the repository (findings summarised here, no excerpts).
+
+1. **Solutions marked as rounded.** A solution the material writes with `≈`, « rund » or « ca. »
+   counts as a stated rounding rule, at the solution's own decimals: an answer that rounds to it
+   at those decimals is correct (more decimals allowed); fewer decimals is `precision`. A rule in
+   a note that governs the exercise (« Runde immer auf zwei Nachkommastellen, wenn nichts anderes
+   angegeben ist »), and « Runde sinnvoll », count as stated. Rounding to tens, hundreds or
+   thousands is a rule too. Without any of these, §7.1 holds: exact. (About 45 % of the solutions
+   in the grade 9 chapters on similarity and circles are rounded with no rule in the task.)
+2. **Exact roots are numbers.** `2√2`, `(3 + √2) cm`, `x₁ = −3 + √2`, `L = {1 − √7; 1 + √7}` are read
+   and compared exactly; an equation whose solutions are of that form is checkable without a
+   rounding rule.
+3. **Required unit or form.** When the exercise asks for a unit (« Rechne um in dm² ») or a number
+   form (fraction, mixed number, decimal, scientific notation, « kürze », « Vereinfache … zu einer
+   Potenz »), the answer must have it: the right value in another unit or form is not correct.
+   A required *expression* form (« Scheitelpunktform », « faktorisiert ») is not checked in this
+   spec: the checker settles the value and says the form is unchecked; nothing is recorded.
+4. **Textbook references and solutions**: R1.4a.
+5. **Figures.** An exercise that needs a figure, a diagram or a measurement on the page is not
+   bindable in this spec (no verdict); « Miss … » tasks never get a key.
+6. **Further readers and kinds**: mixed numbers (`2 1/4`, never read as `21/4`), repeating decimals
+   (`0,1̄`), powers of ten (`1,15 · 10⁴`), division with remainder (`4 Rest 7`), `±`, `x₁ = …, x₂ = …`,
+   « keine Lösung », `L = ℝ`, « nicht definiert »; units `€`/`ct`, `°C`, days; « Ordne zu » as the kind
+   `mapping`; « richtig oder falsch? Begründe »: only the choice is checked, the reason is not.
+7. **Equations**: besides polynomials of degree ≤ 4, equations with the variable in a denominator
+   (`24/x = 3`, Strahlensätze) and pure powers (`x⁵ = 1024`, `x⁻² = 1/9`) are solved by code.
