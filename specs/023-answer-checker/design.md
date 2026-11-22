@@ -1,8 +1,8 @@
 # Spec 023 — Answer checker: design
 
-Requirements: `requirements.md` (owner's decisions §§6–11). Revised after the reviews in
+Requirements: `requirements.md` (owner's decisions §§6–13). Revised after the reviews in
 `specs/023-review.md`, `specs/023-review-followup.md`, `specs/023-design-proposal.md` and
-`specs/023-review-claude.md`, and the textbook check (D11 revised, D12–D16). Builds on specs 005 (pack), 008/009 (board, expression grammar),
+`specs/023-review-claude.md`, `specs/023-review-reconciliation.md`, `specs/023-review-chatgpt-2.md` (requirements §13), and the textbook check (D11 revised, D12–D16). Builds on specs 005 (pack), 008/009 (board, expression grammar),
 011/017/021 (course languages), 018 (stored tool entries), 020 (révision record). The
 implementation branch must start from a branch that has spec 021's code (German rows): every
 per-language table below has an `fr`, `en`, `nl` and `de` row.
@@ -404,16 +404,15 @@ arbitrary exercise data. The ID alone is not authorization.
   A failed or cancelled turn creates no orphan eligible presentation. The existing stopped-parcours
   `seance/report` path may retain a partial turn, but only server-validated, stored cards become
   eligible; it cannot accept a forged binding from a client report.
-- **Voice in parcours (moved to a later spec, requirements §12.1; kept as input for it):** In this
-  spec a card from `/api/voice/tool` is shown unbound, and a reported voice turn never creates a
-  checkable presentation. The later spec's starting point: the trusted `/api/voice/tool` `display_board` path validates and persists
-  the presentation and the authoritative card before returning a checkable card and ID. Associate
-  it with the authenticated server-owned voice session and the applicable chapter, section,
-  version and transcript ordering. The later `/api/seance/report` reconciles the same server-issued
-  card/tool call ID, preserving spoken transcript ordering and partial stopped turns without
-  duplicating or overwriting the authoritative card. A client-supplied report cannot create or
-  alter a checkable presentation. If storage or association fails, the card is not checkable.
-  Define the exact voice-session association and report reconciliation in §10 before planning.
+- **Activation (requirements §13.2):** after the store succeeds, the server sends `turn.stored
+  {exercise_ids}` (and `message_id`, §3.10); only this event enables an answer field. `turn.end`
+  is sent even after a failed store (`api/sse.py`), so it never enables one. A failed store
+  sends no `turn.stored`: the cards stay disabled. Reload restores from the stored transcript and
+  its eligible presentations. Cards in a stopped turn reported later through `seance/report` are
+  stored as reported but never bound.
+- **Voice:** a card created in a voice session (`/api/voice/tool`) is shown unbound and a reported
+  voice turn never creates a presentation (requirements §12.1, §13.5). The concept for the later
+  voice spec is kept in Appendix A.
 
 A parcours presentation stored in the same owner's course, chapter, section and content version can
 remain usable across `capped` rows and return to the section; the source row need not remain live.
@@ -428,9 +427,12 @@ provide automatic revision rollover, and this spec does not assume that it does.
 ### 3.10 Confirming and submitting an answer
 
 A dedicated card field submits the entire answer, and a choice selection submits its option ID.
-For chat (stage 023c), the tutor may call `propose_answer(exercise_id, message_id)` to open a
-confirmation, but cannot submit the answer. The candidate text is the server-recorded learner
-message, not a model-authored answer or a model-selected substring. The learner selects the
+For chat (stage 023c), the tutor may call `propose_answer(exercise_id)` to open a confirmation,
+but cannot submit the answer. The server assigns the turn's learner message a `message_id` when
+the turn starts (today `LearnerEntry` has no ID and is stored only with the turn); the proposal
+refers to that message, its candidate text is that message's text, never model-authored text or
+a model-selected substring, and the confirmation chip is enabled only by the turn's
+`turn.stored` (requirements §13.3). A cancelled or unstored turn leaves no proposal. The learner selects the
 exercise and confirms or edits the text before submission. The UI makes both value and exercise
 visible. If the original message, exercise or intent is ambiguous, ask for clarification; do not
 prefill a solution from model prose or the key. Keyboard and screen-reader paths must work. Voice
@@ -439,7 +441,7 @@ is out of this spec (requirements §12.1).
 `POST /api/answers/submissions` (route name to be finalized against the existing APIs) takes
 `{exercise_id, answer, source, request_id}`. An authenticated learner's explicit field submit,
 choice, or confirmation constitutes the submission. `source` is `card`, `choice` or `chat`
-(`voice` is reserved for the later voice spec); it is informational and does not replace authorization. The server resolves the
+(`voice` is reserved for the later voice spec and refused with `422` in this one); it is informational and does not replace authorization. The server resolves the
 presentation and its eligibility, reads the key server-side, checks the confirmed answer locally,
 and commits the submission, result and transcript entry in one transaction. For révision this
 transaction also records a recordable per-exercise result and its source. The response contains
@@ -492,8 +494,8 @@ source for the board. A canonical server-owned transcript entry carries the `sub
 `exercise_id`, answer, outcome and basis and is persisted with the submission. Model-facing history
 includes the learner's answer and committed outcome/basis, never a tool output key. On replay the
 board restores the outcome for its original card and the student's confirmed answer. Retry and
-reconnect never append it twice. Existing stored tool entries remain readable. The exact schema,
-wire event names, and ordered coexistence with streamed and reported voice entries require review.
+reconnect never append it twice. Existing stored tool entries remain readable. New SSE event
+`turn.stored {exercise_ids, message_id}` (§3.9). The exact schema and wire names require review.
 
 ### 3.13 Révision record: `exercise_results`
 
@@ -507,11 +509,19 @@ date and exercise identity; a single verdict never marks a section as mastered. 
 changed chapter cannot reuse an earlier run's presentation unless a later design explicitly links
 that run and scope. Schema, migration and exact reset/deletion lifecycle are review items in §10.
 
+**Stage boundary (requirements §13.1):** in 023a a révision submission commits the submission and
+its transcript entry only; the card, replay and the tutor's next turn show the verdict, the Bilan
+does not. 023b adds `exercise_results` and the Bilan list for submissions made from then on; no
+backfill from earlier transcript entries.
+
 ### 3.14 Tutor prompt and mode layers
 
 - `tutor.<lang>.md` (all four): set checkable cards using validated binding; use only committed
   server-supplied verdict and basis, and never call something correct or incorrect based on the
-  model's own judgment. Guide without a verdict when checking is unavailable.
+  model's own judgment. Guide without a verdict when checking is unavailable. This rule is measured
+  behaviour (requirements §13.6): `scripts/probe.py --checker` counts verdict words in tutor prose
+  outside a committed verdict per language, with a pass threshold set when the probes are written;
+  the card's verdict line names its source so the learner knows which statement is authoritative.
 - `propose_answer` may offer the confirmation of the original learner message;
   it cannot grade, send an answer, or select the key. Learner confirmation calls the normal route.
 - `modes/revision.<lang>.md`: the tutor still displays the course's wording after the question is
@@ -550,7 +560,10 @@ that run and scope. Schema, migration and exact reset/deletion lifecycle are rev
 
 - `types.ts`: committed submission response, `Verdict`, `Basis`; card fields `exercise_id`, `status`,
   `task`, `check`; `CheckQuestionCard` without `correct_option_id` / `feedback` (old stored cards
-  still parse: extra fields ignored).
+  still parse: extra fields ignored). Stage 023a, every mode (requirements §13.4): the backend card
+  model accepts the old fields as optional and drops them (the declaration no longer has them), and
+  `CheckQuestionBoard` in parcours, discussion, révision and the notebook never colours a pick or
+  shows `feedback` without a checker verdict.
 - Reducer (`use-tutor-session.ts`): a committed submission response → transcript marker and the
   verdict of the card with that `exercise_id`; replay in `sessionFromEntries` the same way.
   `BoardStatus` of a board: `correct`/`wrong` from its exercise card's verdict.
@@ -563,7 +576,8 @@ that run and scope. Schema, migration and exact reset/deletion lifecycle are rev
   previously selected option only if it was recorded.
 - Révision « Bilan » (`revision-bilan.tsx`): per section, the self-assessment chip as today and a
   list of checked exercises (ref or task, verdict mark, source, date), with explicitly labelled
-  review exercises distinguishable. Learners can correct the exercise label in the pack (D19).
+  review exercises distinguishable. The learner corrects a label from the Bilan or the pack view;
+  the correction is a per-exercise override stored outside the pack (requirements §13.7).
 - For a candidate answer from chat, show the proposed exercise and answer for the learner to
   confirm or correct before submission. Preserve keyboard and screen-reader paths.
 - Pack view: per exercise a « prüfbar » or « Lösung prüfen » badge, from `keys`.
@@ -575,10 +589,11 @@ that run and scope. Schema, migration and exact reset/deletion lifecycle are rev
 | --- | --- |
 | Presentation | Server-issued opaque card ID, owner, course, chapter, section, mode, content version, origin and immutable binding; created with the stored card. |
 | Submission | Owner, presentation ID, client request ID, source, confirmed value, status and timestamp; uniqueness and retention enforce the idempotent submission contract. |
-| Transcript | Canonical submission/result entry referring to the presentation and submission; authoritative voice-card entries referenced during report reconciliation. Old tool entries and cards remain readable. |
+| Transcript | Canonical submission/result entry referring to the presentation and submission; learner entries gain a server `message_id` (023c). Old tool entries and cards remain readable. |
 | `exercise_results` | Per-exercise revision result, unique by submission ID, written with submission and transcript; existing `revision_results` unchanged. Migration/schema names remain to be finalized. |
 | `ExerciseCard`, `CheckQuestionCard` | Optional binding input, server presentation ID/status and generated task; no model-chosen `correct_option_id` or automatic feedback. |
-| `PackIndex`, chapter scope | Parsed keys and explicit editable review label; current content version controls staleness. |
+| `PackIndex`, chapter scope | Parsed keys and the explicit review label from the material; current content version controls staleness. |
+| Review-label override (023b) | Owner, chapter, exercise ref, label on/off, timestamp; outside the pack, so no new content version and no progress reset; deleted with the chapter; ignored when the ref no longer exists. |
 | APIs and client events | Presentation, confirmed-submission response, transcript replay and revision result DTO; wire names are review items (voice report reconciliation: later voice spec). |
 
 The presentation is scoped by its owner, course, chapter, section, version and mode, and by an
@@ -590,7 +605,7 @@ limits and migration in design review, without relying on browser-supplied autho
 ## 5. Error handling
 
 - A failed card-store operation leaves the card unbound or disabled; a learner can retry after a
-  successful store. Voice storage failure must never fall back to a forged client-reported binding.
+  successful store (`turn.stored`). A reported or voice-created card never becomes bound.
 - Unknown, stale, foreign, wrong-mode, unconfirmed or unpresented submissions are refused without
   a correctness verdict. Check owner and reset/content version on retries as well as initial calls.
 - Malformed input is unreadable and gives an example; undecidable input gives no judgment. A
@@ -610,8 +625,9 @@ limits and migration in design review, without relying on browser-supplied autho
   or unsupported values. Boundaries include exact ties, close roots, repeated roots, excluded roots,
   no/all-real solutions, supported domain annotations and unequal domains; use independently
   calculated expected results, not only mirrored implementation examples.
-- Exact parser and algebra: decimal lexemes remain rational instead of passing through the existing
-  plotting parser's floats; guards survive cancellation; real-domain equality, gcd/root counts,
+- Exact parser and algebra: an exact mode of the `domain/expression.py` grammar keeps number
+  lexemes (today `atom()` returns `float(t.text)`), so decimals remain rational; the plotting
+  parser's behaviour and its tests are unchanged; guards survive cancellation; real-domain equality, gcd/root counts,
   isolations, resource caps and certified π rounding behave as specified. Unsupported cases and
   exhausted limits return inconclusive, never an invented verdict.
 - Binding and authorization: a card that was not successfully stored, a forged voice report,
@@ -623,15 +639,17 @@ limits and migration in design review, without relying on browser-supplied autho
   Identical retries and concurrent requests produce one submission and one result; request-ID reuse
   with different payload conflicts; lost responses, reload and failure before/after commit are
   covered. A failed later model turn leaves an already committed learner result intact.
-- Transcript integration: presentation and card are stored atomically before enabling a text
+- Transcript integration: `turn.stored` only after a successful store, never after a failed one
+  (`turn.end` still follows); presentation and card are stored atomically before enabling a text
   card, including interruption and retry, section splits, caps and reset races. A card from a voice
   session or a reported voice turn is never checkable.
 - Revision: submission, canonical entry and per-exercise result commit atomically; failed submission
   rolls all three back. `record_result` keeps spec 020 turn semantics, and self-assessment and
   checker results remain separate. Label, source and date survive replay without marking a section
   mastered. Practice-test aggregation stays deferred to spec 022.
-- Frontend: field, choice, chat/voice confirmation, editable transcript, cancellation, accessible
-  keyboard/screen-reader interaction, failure and restore; old cards never gain an unverified verdict.
+- Frontend: field enabled only by `turn.stored`, choice, chat confirmation, cancellation,
+  accessible keyboard/screen-reader interaction, failure and restore; old cards in every mode never
+  gain an unverified verdict or feedback; dictated composer text behaves as typed text.
 - Real-model probes are separately run and recorded: the tutor uses the committed outcome and
   basis, avoids inventing verdicts and does not disclose answer keys. No live-provider run is
   implied by this spec.
@@ -669,14 +687,28 @@ The user requested reconciliation of `specs/023-review-claude.md`; requirements 
 resulting direction. The revised specification remains in design review, not implementation planning:
 
 1. Finalize exact presentation/submission/transcript schema, route contracts, concurrency, quota and
-   migration; prove commit/retry/reload behavior against the current séance and revision stores.
+   migration; prove commit/retry/reload behavior against the current séance and revision stores;
+   the `turn.stored` event and the server `message_id` (requirements §13.2–13.3).
 2. Voice is out of this spec (requirements §12.1): specify only that voice cards stay unbound and
    that a reported voice turn cannot create a checkable presentation; the voice-session association
    and report reconciliation belong to the later voice spec.
 3. Fix exact-parser interfaces, supported stated-domain grammar, certified root and π bounds, and
    concrete resource limits. Review examples and prove boundary handling before coding.
-4. Specify review-label syntax, editor validation and revision DTO. Defer the practice-test
-   integration and aggregation contract to spec 022.
+4. Specify review-label syntax in the pack, the override endpoint and the revision DTO (requirements
+   §13.7). Defer the practice-test integration and aggregation contract to spec 022.
 5. The plan follows the three stages of requirements §12.2 (023a checker and card submission in the
    parcours, 023b révision record and review labels, 023c chat confirmation); each stage ends in a
    shippable, tested state.
+
+## Appendix A. Input for the later voice spec (not part of spec 023)
+
+Kept from the design before requirements §12.1, for the spec that will check spoken answers:
+
+- the trusted `/api/voice/tool` `display_board` path validates and persists
+  the presentation and the authoritative card before returning a checkable card and ID. Associate
+  it with the authenticated server-owned voice session and the applicable chapter, section,
+  version and transcript ordering. The later `/api/seance/report` reconciles the same server-issued
+  card/tool call ID, preserving spoken transcript ordering and partial stopped turns without
+  duplicating or overwriting the authoritative card. A client-supplied report cannot create or
+  alter a checkable presentation. If storage or association fails, the card is not checkable.
+  The voice spec defines the exact voice-session association and report reconciliation.

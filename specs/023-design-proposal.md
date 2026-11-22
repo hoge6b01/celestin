@@ -1,5 +1,8 @@
 # Spec 023 — design proposals for review
 
+> **Superseded in part (22 November 2026):** voice is out of spec 023 and the work is planned in
+> three stages; see requirements §12 and §13. This note is kept as history.
+
 Draft for discussion, not an approved design or implementation plan. The user-approved directions
 below are incorporated into requirements §10. The agreed decisions from the previous review are in
 `specs/023-review.md` and `specs/023-review-followup.md`. Technical proposals still need review

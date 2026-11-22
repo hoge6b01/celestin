@@ -1,5 +1,8 @@
 # Spec 023 — reconciliation of Claude's review
 
+> **Superseded in part (22 November 2026):** voice is out of spec 023 and the work is planned in
+> three stages; see requirements §12 and §13. This note is kept as history.
+
 The user requested that the specs be revised and extended after `023-review-claude.md` was
 discussed. The following records what was incorporated; it does not approve the final design or
 authorize planning and implementation. The original review and previous decision records are

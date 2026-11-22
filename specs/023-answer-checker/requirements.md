@@ -146,8 +146,10 @@ spec 022 share the same verdicts.
 5. Each kind has a case table per course language (`tests/fixtures/answer_cases.json` or one per
    kind), with accepted, refused, unreadable and not-checkable inputs; where the frontend parses
    the same notation, the table is shared byte-identically, like `notation_cases.json`.
-6. It reuses the existing readers: `domain/expression.py` (`parse`), `NUMBER`, `INTERVAL`, `COORDS`
-   (`services/tools/figures.py`), moved to a shared place.
+6. It reuses the existing readers `NUMBER`, `INTERVAL`, `COORDS` (`services/tools/figures.py`),
+   moved to a shared place, and the grammar of `domain/expression.py` through an **exact** mode
+   that keeps every number as written (no conversion to `float`); the plotting parser keeps its
+   behaviour (§13.8).
 7. Unreadable is not incorrect: the student is told the expected form with an example in the
    course's notation and answers again.
 
@@ -184,9 +186,11 @@ verdict is about that exercise and nothing else.
    within the same owner, chapter, section and content version, provided it was actually stored and
    remains eligible. Chapter edits, resets, deletion and a replaced révision invalidate it according
    to the design; authorization and mode are checked every time.
-8. Not in voice (§12.1): a card shown during a voice session is not checkable, and a spoken answer
-   is not submitted. A card presented in a stored text turn keeps its answer field, also while a
-   voice session runs; its verdict shows on the card. Checking spoken answers is a later spec.
+8. Not in voice (§12.1): a card **created** in a voice session is not checkable, and a spoken
+   answer is not submitted. A card created in a stored text turn keeps its answer field, also while
+   a voice session runs; its verdict shows on the card. Text dictated into the composer, seen,
+   editable and sent by the learner, is text input, not voice (§13.9). Checking spoken answers is a
+   later spec.
 
 ### R4. The tutor's rule changes with the checker
 
@@ -197,12 +201,14 @@ can rely on it.
    never declare a correct/incorrect verdict without one. For other answers the current rule
    (guidance without a verdict) holds. Checker outcome context contains no key; the tutor's
    existing course pack may already contain the material's solution and remains governed by the
-   no-answer-while-open rules.
+   no-answer-while-open rules. This is tutor behaviour, measured, not mechanically enforced in
+   free prose (§13.6): the authoritative verdict is the one on the card, with its source.
 2. After `incorrect`, the usual tutoring applies: questions and hints, no answer.
 3. **Multiple choice** (§7.6): a choice card shows a correct/incorrect verdict only when it is bound
    to a `choice` key and the checker evaluated the pick. A choice card without such a key shows the
    pick and no verdict; Célestin may still discuss it. The model-chosen correct option no longer
-   produces a verdict, in any mode; stored cards replay without one.
+   produces a verdict, in any mode (discussion, notebook and old stored cards included); stored
+   cards replay without one. Delivered with stage 023a (§13.4).
 
 ### R5. Checked exercises in the révision record
 
@@ -226,6 +232,9 @@ whole section.
 6. In the parcours, verdicts are shown and stored in the séance transcript only; they do not move
    the path (`complete_section` stays the only way a section is done) and are not recorded in
    révision.
+6a. Stage boundary (§13.1): before stage 023b, a révision verdict is shown on its card and stored
+   in the transcript only. From 023b on, new submissions are also recorded per exercise; earlier
+   ones are not imported.
 7. Summaries over several checked exercises of a section belong to spec 022.
 
 ## 4. Non-functional requirements
@@ -387,7 +396,8 @@ The user agreed to the directions documented in `specs/023-design-proposal.md`:
 3. Require a complete, reliable set of solutions and unambiguous rounding before a verdict,
    including for cubic and quartic equations.
 4. Store an explicitly marked review label with the pack exercise, show it in the revision
-   overview, and allow the learner to correct it. Do not infer the label from ambiguous material.
+   overview, and allow the learner to correct it (the correction is stored outside the pack,
+   §13.7). Do not infer the label from ambiguous material.
 5. Generate the checkable statement of a purely mathematical variant from its checking data. A
    word problem whose agreement with those data cannot be reliably established can still be
    posed and discussed without an automatic verdict.
@@ -430,3 +440,30 @@ At the user's request the design incorporates `specs/023-review-claude.md` with 
      parcours (and révision display, without its record);
    - **023b**: the révision record per exercise (`exercise_results`) and the review labels;
    - **023c**: chat candidates with `propose_answer` and the learner's confirmation.
+
+## 13. Decisions on the second ChatGPT review (owner, 22 November 2026; `specs/023-review-chatgpt-2.md`)
+
+1. **F1, stage boundary.** In 023a a révision verdict lives on its card and in the transcript (with
+   replay and the tutor's next-turn context), with no per-exercise record and no Bilan entry. 023b
+   adds `exercise_results` for new submissions only; earlier submissions are not imported.
+2. **F2, card activation.** A checkable card's answer field becomes active only on a dedicated
+   « turn stored » signal that names its exercise IDs and is sent only after the turn's store
+   succeeded; `turn.end` alone never activates it. On a failed store the field stays disabled; on
+   reload the stored state decides. Cards in a stopped turn that the browser reports afterwards
+   stay unbound.
+3. **F3, chat candidates (023c).** The server assigns the learner's message an ID when the turn
+   starts. `propose_answer` refers to that message; the candidate text comes only from it, never
+   from the model, and the proposal becomes active only once the turn is stored (§13.2).
+4. **F4, choice cards in every mode** belong to stage 023a: old stored fields are still read but
+   ignored; no choice is coloured without a checker verdict in any mode.
+5. **F5, voice wording.** What counts is where a card was **created** (R3.8). The earlier voice
+   concept is kept in a design appendix as input for the later voice spec; the earlier notes that
+   keep voice in scope are marked as superseded by §12.
+6. **F6, tutor prose.** « No verdict without the checker » in Célestin's free text is measured tutor
+   behaviour (prompt rule plus real-model probes with a pass threshold), like today's rule; only the
+   verdict on the card, with its source, is authoritative, and the interface says so.
+7. **F7, review labels.** The learner's correction of a review label is stored outside the pack,
+   as a per-exercise override; it does not change the pack's content version and so does not reset
+   progress.
+8. **F8, exact parsing**: R2.6.
+9. **Dictation** into the composer is text input (R3.8).
