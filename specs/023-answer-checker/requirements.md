@@ -202,11 +202,16 @@ révision starts from what the code saw too.
   substitution only (§1.2).
 - Graded class test analysis and correction review (follow-ups named in spec 022).
 
-## 6. Open questions
+## 6. Decisions on the open questions (owner, 22 November 2026)
 
-1. Parcours verdicts: should they also feed the révision record, or stay in the transcript only?
-2. Required forms for `expression` (« factorised », « simplified »): which forms, per subject, and
-   are they part of this spec or later?
-3. Units: does the pack carry the conversions a `number` key accepts (km/h ↔ m/s), or only the
-   key's own unit?
-4. Tolerance defaults when the material does not state a rounding.
+1. Parcours verdicts are shown and stored in the séance transcript only; they do not feed the
+   révision record (R5.5 stands).
+2. Required forms for `expression` (« factorised », « simplified ») are later: this spec checks
+   equivalence only; when an item asks for a form, the checker settles the value and Célestin
+   looks at the form without a verdict.
+3. Units: a fixed built-in table of common SI conversions (length, mass, time, speed, volume,
+   area, percent); `25 m/s` and `90 km/h` are equal. A unit outside the table is compared as
+   written.
+4. Tolerance when the material states no rounding: the key's own decimals. An answer that rounds
+   to the key at the key's decimals is correct (more decimals allowed); fewer decimals than the
+   key is `precision` (« not precise enough »), not correct.
