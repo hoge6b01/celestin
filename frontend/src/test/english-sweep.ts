@@ -54,11 +54,17 @@ const FRENCH_WORDS =
 const ENGLISH_WORDS =
   /\b(?:Back|Sign in|Sign out|Cancel|Save|Delete|Next|Previous|Settings|Chapter|Chapters|Course|Courses|Lesson|Practice|Summary|Loading|Try again|Continue|Resume|Review|Search|Close|Copy|Rename|Preparing)\b/;
 
+// German (spec 021 §5.5): whole words of the three other languages, Dutch included, since a German
+// screen sits next to a Dutch one in the catalogs. No accent test: German has ä, ö, ü of its own.
+const DUTCH_WORDS =
+  /\b(?:Terug|Aanmelden|Afmelden|Annuleren|Opslaan|Verwijderen|Volgende|Vorige|Hoofdstuk|Hoofdstukken|Instellingen|Oefeningen|Traject|Hervatten|Doorgaan|Sluiten|Mijn cursussen|Opnieuw proberen)\b/;
+
 /** The detectors, by interface language: what must not appear in a screen written in it. */
 export const FOREIGN: Record<Locale, (text: string) => boolean> = {
   fr: (text) => ENGLISH_WORDS.test(text),
   en: (text) => isFrench(text),
   nl: (text) => FRENCH_WORDS.test(text) || ENGLISH_WORDS.test(text),
+  de: (text) => FRENCH_WORDS.test(text) || ENGLISH_WORDS.test(text) || DUTCH_WORDS.test(text),
 };
 
 /** Text of another language in a screen written in `locale`, outside the regions that carry a `lang`

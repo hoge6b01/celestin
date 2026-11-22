@@ -36,13 +36,17 @@ class SubjectInfo:
         return render(f"subject.{self.id}", locale)
 
 
+# The course languages offered for every subject: a language joins this tuple once its prompts, templates
+# and tables all exist (spec 017 phase 7, spec 021 phase 8). One place, so that offering it is one edit.
+OFFERED: tuple[CourseLanguage, ...] = ("fr", "en", "nl", "de")
+
 SUBJECTS: dict[Subject, SubjectInfo] = {
     info.id: info
     for info in (
-        SubjectInfo("mathematics", True, ("fr", "en", "nl")),
-        SubjectInfo("sciences", True, ("fr", "en", "nl")),
-        SubjectInfo("languages", True, ("fr", "en", "nl")),
-        SubjectInfo("general", True, ("fr", "en", "nl")),
+        SubjectInfo("mathematics", True, OFFERED),
+        SubjectInfo("sciences", True, OFFERED),
+        SubjectInfo("languages", True, OFFERED),
+        SubjectInfo("general", True, OFFERED),
     )
 }
 

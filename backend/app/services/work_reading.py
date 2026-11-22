@@ -30,6 +30,7 @@ _PHOTO_LABEL = by_language(
     fr="Voici la photo du travail de l'élève.",
     en="Here is the photo of the student's work.",
     nl="Hier is de foto van het werk van de leerling.",
+    de="Hier ist das Foto der Arbeit der Schülerin oder des Schülers.",
 )
 _DOUBT = re.compile("(?:" + "|".join(re.escape(markers.uncertain) for markers in MARKERS.values()) + "):")
 

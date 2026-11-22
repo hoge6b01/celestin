@@ -42,7 +42,7 @@ describe("the client strategy", () => {
   });
 
   it("ignores a stored language it does not support", () => {
-    client.setQueryData(ME_QUERY_KEY, { id: "u", locale: "de" });
+    client.setQueryData(ME_QUERY_KEY, { id: "u", locale: "es" });
     expect(getLocale()).toBe("fr");
   });
 });
@@ -93,7 +93,7 @@ describe("resetLocale", () => {
   });
 
   it("falls back to French when the browser offers nothing supported", () => {
-    languages(["de-DE"]);
+    languages(["es-ES"]);
     document.documentElement.lang = "en";
     act(() => resetLocale());
     expect(document.documentElement.lang).toBe("fr");

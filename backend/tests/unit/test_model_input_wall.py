@@ -38,7 +38,10 @@ MODEL_FACING = [
     APP / "services" / "revision.py",
     *sorted((APP / "services" / "tools").glob("*.py")),
 ]
-FORBIDDEN = {"app.domain.messages", "app.domain.messages.fr", "app.domain.messages.en"}
+FORBIDDEN = {
+    "app.domain.messages", "app.domain.messages.fr", "app.domain.messages.en", "app.domain.messages.nl",
+    "app.domain.messages.de",
+}
 
 
 def _imports(path: Path) -> set[str]:

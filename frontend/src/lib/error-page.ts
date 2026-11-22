@@ -2,7 +2,7 @@ import { languageHeaders } from "./html-headers";
 import { DEFAULT_LOCALE, parseAcceptLanguage, type Locale } from "./locale";
 
 /** The page the server answers when rendering itself failed, so it can lean on no
- *  catalog, no router and no framework: its two languages are written out here
+ *  catalog, no router and no framework: its languages are written out here
  *  (spec 010 §5.6). */
 const TEXT: Record<Locale, { title: string; body: string; retry: string; home: string }> = {
   fr: {
@@ -22,6 +22,12 @@ const TEXT: Record<Locale, { title: string; body: string; retry: string; home: s
     body: "Er is iets misgegaan aan onze kant. Je kunt de pagina vernieuwen of terug naar de startpagina gaan.",
     retry: "Opnieuw proberen",
     home: "Terug naar de startpagina",
+  },
+  de: {
+    title: "Diese Seite wurde nicht geladen",
+    body: "Bei uns ist etwas schiefgelaufen. Du kannst die Seite neu laden oder zur Startseite zurückgehen.",
+    retry: "Erneut versuchen",
+    home: "Zur Startseite",
   },
 };
 

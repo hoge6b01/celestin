@@ -171,7 +171,30 @@ _PACK_WORDS_NL: dict[str, re.Pattern[str]] = {
         "tan": r"\btan\b|\btg\b|\btangens\b",
     }.items()
 }
-PACK_WORDS_BY_LANGUAGE = by_language(fr=PACK_WORDS, en=_PACK_WORDS_EN, nl=_PACK_WORDS_NL)
+# The same, for a German course (spec 021 §4.6). *Tangens* is the function, the *Tangente* is a line;
+# « exponentielles Wachstum » is a phenomenon, not the function; `lg` is the common logarithm.
+_PACK_WORDS_DE: dict[str, re.Pattern[str]] = {
+    name: re.compile(pattern, re.IGNORECASE)
+    for name, pattern in {
+        "exp": (
+            r"\\exp(?![A-Za-z])|\bexp\s*\(|\bexponentialfunktion(?:en)?\b|\be-funktion(?:en)?\b"
+            r"|(?-i:\be\}?\s*\^)(?!\s*\{?\s*[-+−](?!\s*[\w\\({]))"
+        ),
+        "ln": (
+            r"\bln\b|\bnatürliche[nrs]?\s+logarithmus\b"
+            r"|\blogarithmus\s+zur\s+basis\s+\$?\s*(?:\\mathrm\{e\}|\{e\}|e)(?!\w)"
+        ),
+        "log": (
+            r"\blg\b|\blog(?![A-Za-z])|\bzehnerlogarithmus\b|\bdekadische[nrs]?\s+logarithmus\b"
+            r"|\blogarithmus\s+zur\s+basis\s+\$?\s*10\b"
+        ),
+        "cbrt": r"\bkubikwurzel\b|\bdritte\s+wurzel\b|\\sqrt\s*\[\s*3\s*\]|∛",
+        "sin": r"\bsin\b|\bsinus",
+        "cos": r"\bcos\b|\bkosinus|\bcosinus",
+        "tan": r"\btan\b|\btangens\b",
+    }.items()
+}
+PACK_WORDS_BY_LANGUAGE = by_language(fr=PACK_WORDS, en=_PACK_WORDS_EN, nl=_PACK_WORDS_NL, de=_PACK_WORDS_DE)
 
 # What gives an exercise's answer away in a label, a title or a caption, once LaTeX
 # spacing, `\left`, `\right` and braces are gone (`gives_away`). First a relation: an
@@ -189,7 +212,7 @@ _GROUPS = re.compile(r"(?=\(([^()]*)\))|(?=[\[\]]([^\[\]]*)[\[\]])")
 _GROUPS_EN = re.compile(_GROUPS.pattern + r"|(?=[\[(]([^\[\]()]*)[\])])")
 # Dutch (Flemish): the board's outward brackets, and the mixed ones a teacher writes by hand (`(2, 5]`, `[2, 5)`).
 _GROUPS_NL = _GROUPS_EN
-GROUPS = by_language(fr=_GROUPS, en=_GROUPS_EN, nl=_GROUPS_NL)
+GROUPS = by_language(fr=_GROUPS, en=_GROUPS_EN, nl=_GROUPS_NL, de=_GROUPS_EN)  # German: as Dutch
 # A value: a digit, π, a root or infinity, however it is written (`\frac{9}{4}`
 # keeps its digits). A name (`x_S`, `a`) is not one.
 _VALUE = re.compile(r"\d|π|∞|\\(?:pi|sqrt|infty)(?![A-Za-z])")
@@ -202,8 +225,13 @@ _COMMA = re.compile(r",(?=\s|[-+])")
 _COMMA_EN = re.compile(",")
 # Dutch: a decimal comma, as French (`(0,5)` is one value, `(1, 4)` a pair).
 _COMMA_NL = _COMMA
-COMMA = by_language(fr=_COMMA, en=_COMMA_EN, nl=_COMMA_NL)
+COMMA = by_language(fr=_COMMA, en=_COMMA_EN, nl=_COMMA_NL, de=_COMMA)  # German: a decimal comma too
+# The course's own member separator, never prose's: `;`, and in German also the bar of a point, `(2 | 3)`.
+_MEMBERS = re.compile(";")
+MEMBERS = by_language(fr=_MEMBERS, en=_MEMBERS, nl=_MEMBERS, de=re.compile(r"[;|]"))
 _LATEX_SPACING = re.compile(r"\\[,;:! ]|\\(?:left|right|quad)\b|[{}~]")
+# A bar written in LaTeX (`P(2 \mid 3)`) reads as the bar it draws.
+_LATEX_BAR = re.compile(r"\\(?:mid|vert)(?![A-Za-z])")
 
 
 def _n(value: float) -> str:
@@ -489,11 +517,12 @@ def _texts(plot: PlotBlock) -> list[tuple[str, str]]:
 
 
 def _gives_values(group: str, language: CourseLanguage = DEFAULT_COURSE_LANGUAGE) -> bool:
-    """Coordinates or an interval: members split by `;` (the course's separator, never
+    """Coordinates or an interval: members split by the course's separator (`MEMBERS`, never
     prose's), one of them a value, as in `(x_S ; 2)`; or split by a comma, two of
     them values, so « (cm, toutes les 0,5 s) » stays a unit."""
-    if ";" in group:
-        return any(_VALUE.search(member) for member in group.split(";"))
+    members = MEMBERS[language].split(group)
+    if len(members) > 1:
+        return any(_VALUE.search(member) for member in members)
     return sum(1 for member in COMMA[language].split(group) if _VALUE.search(member)) >= 2
 
 
@@ -503,7 +532,7 @@ def gives_away(text: str, language: CourseLanguage = DEFAULT_COURSE_LANGUAGE) ->
     drawing may not hold. A bare number is not caught (« toutes les 0,5 s » is a
     quantity). No backtracking pattern: a 200-character caption takes well under a
     millisecond. Shared with scripts/probe.py."""
-    flat = _LATEX_SPACING.sub("", text).replace("−", "-")
+    flat = _LATEX_SPACING.sub("", _LATEX_BAR.sub("|", text)).replace("−", "-")
     if _RELATION.search(flat):
         return True
     return any(

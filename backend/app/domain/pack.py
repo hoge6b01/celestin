@@ -104,7 +104,9 @@ _NUMBERING_EN = _numbering_roman(_KEYWORD_EN)
 # Dutch: as English, with the Dutch keywords (a bare « IV. » or « 4) » is a number alone).
 # A Dutch heading also numbers with « nr. » (« Hoofdstuk nr. 3 »).
 _NUMBERING_NL = _numbering_roman(_KEYWORD_NL, r"(?:(?:nr|no)\.?\s*|n°\s*)?[0-9IVXivx]+")
-_NUMBERING_BY_LANGUAGE = by_language(fr=_NUMBERING, en=_NUMBERING_EN, nl=_NUMBERING_NL)
+_KEYWORD_DE = r"(?:(?:kapitel|kap\.?|lektion|lerneinheit|einheit|thema|teil|modul|abschnitt|sequenz|woche|stunde)(?:\s+|(?<=\.)))"
+_NUMBERING_DE = _numbering_roman(_KEYWORD_DE, r"(?:nr\.?\s*)?[0-9IVXivx]+")
+_NUMBERING_BY_LANGUAGE = by_language(fr=_NUMBERING, en=_NUMBERING_EN, nl=_NUMBERING_NL, de=_NUMBERING_DE)
 
 
 def chapter_title(heading: str, language: CourseLanguage = DEFAULT_COURSE_LANGUAGE) -> str:
@@ -161,7 +163,7 @@ def parse_template(
 
 
 
-_LANGUAGE_NAMES_FR = by_language(fr="français", en="anglais", nl="néerlandais")
+_LANGUAGE_NAMES_FR = by_language(fr="français", en="anglais", nl="néerlandais", de="allemand")
 
 
 def _wrong_language(expected: CourseLanguage, found: CourseLanguage) -> ContentIssue:

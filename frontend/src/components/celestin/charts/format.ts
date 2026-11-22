@@ -62,14 +62,25 @@ export function formatInterval(
   closedLeft: boolean,
   closedRight: boolean,
 ): string {
-  const open = closedLeft && a !== null ? "[" : "]";
-  const close = closedRight && b !== null ? "]" : "[";
-  return `${open}${formatBound(a, "−∞")} ; ${formatBound(b, "+∞")}${close}`;
+  return outwardInterval(" ; ", a, b, closedLeft, closedRight);
 }
 
 /** A class in the course's interval notation: `[10 ; 20[` or `]10 ; 20]`. */
 export function classLabel(a: number, b: number, closed: Closed): string {
   return formatInterval(a, b, closed === "left", closed === "right");
+}
+
+/** Outward brackets around two ends, with the course's `separator` between them. */
+function outwardInterval(
+  separator: string,
+  a: Bound,
+  b: Bound,
+  closedLeft: boolean,
+  closedRight: boolean,
+): string {
+  const open = closedLeft && a !== null ? "[" : "]";
+  const close = closedRight && b !== null ? "]" : "[";
+  return `${open}${formatBound(a, "−∞")}${separator}${formatBound(b, "+∞")}${close}`;
 }
 
 /* ------------------------------ per course language ------------------------------ */
@@ -159,7 +170,36 @@ export const DUTCH: Notation = {
   boxStats: ["Minimum", "Q1", "Mediaan", "Q3", "Maximum"],
 };
 
-export const NOTATION: Record<CourseLanguage, Notation> = { fr: FRENCH, en: ENGLISH, nl: DUTCH };
+// German (spec 021 §5.2): the NRW Gymnasium notation. An explicit object, not a spread of FRENCH, so that a later
+// change to the Belgian notation does not move the German board; where the NRW form is the French one (decimal
+// comma, `1000` and `10 000`, `12,5 %`), the French function is named on purpose. Intervals and lists take no
+// space before the semicolon (`[2; 5[`, `1; 2; 3`), points a bar: `(2 | −1,5)`, as NRW textbooks write them (spec
+// 021, textbook check). `de-DE` is not used here: it would group `10.000` with a dot.
+const germanInterval = (a: Bound, b: Bound, closedLeft: boolean, closedRight: boolean): string =>
+  outwardInterval("; ", a, b, closedLeft, closedRight);
+
+export const GERMAN: Notation = {
+  number: formatNumber,
+  value: formatValue,
+  pair: (x, y) => `(${formatNumber(x)} | ${formatNumber(y)})`,
+  bound: formatBound,
+  interval: germanInterval,
+  classLabel: (a, b, closed) => germanInterval(a, b, closed === "left", closed === "right"),
+  measureName: {
+    effectif: "Häufigkeit",
+    frequence: "Relative Häufigkeit",
+    pourcentage: "Prozent",
+  },
+  boxStats: ["Minimum", "unteres Quartil", "Median", "oberes Quartil", "Maximum"],
+  separator: "; ",
+};
+
+export const NOTATION: Record<CourseLanguage, Notation> = {
+  fr: FRENCH,
+  en: ENGLISH,
+  nl: DUTCH,
+  de: GERMAN,
+};
 
 export const notationFor = (language: CourseLanguage): Notation => NOTATION[language];
 

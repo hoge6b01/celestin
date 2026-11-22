@@ -24,4 +24,12 @@ describe("renderErrorPage", () => {
     expect(page).toContain("Opnieuw proberen");
     expect(page).not.toContain("Réessayer");
   });
+
+  it("speaks German when asked (spec 021)", () => {
+    const page = renderErrorPage("de");
+    expect(page).toContain('<html lang="de">');
+    expect(page).toContain("<title>Diese Seite wurde nicht geladen</title>");
+    expect(page).toContain("Erneut versuchen");
+    expect(page).not.toContain("Réessayer");
+  });
 });

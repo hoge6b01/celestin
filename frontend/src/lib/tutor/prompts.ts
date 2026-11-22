@@ -93,6 +93,24 @@ export const LEARNER_SENTENCES: Record<CourseLanguage, LearnerSentences> = {
       })[outcome],
     voiceToolFailed: "Hulpmiddel niet beschikbaar. Zeg het aan de leerling en ga verder zonder.",
   },
+  de: {
+    review: (title) => `Ich möchte den Abschnitt „${title}“ wiederholen.`,
+    start: (title) => `Fangen wir mit dem Abschnitt „${title}“ an?`,
+    resume: (title) => `Machen wir mit dem Abschnitt „${title}“ weiter?`,
+    skip: (title) => `Ich überspringe den Abschnitt „${title}“.`,
+    nextStep: "Nächster Schritt.",
+    nextSection: "Nächster Abschnitt.",
+    answer: (text) => `Meine Antwort auf die Frage: „${text}“.`,
+    work: (text) => `Hier ist meine Arbeit, gelesen von meinem Foto:\n${text}`,
+    assess: (outcome) =>
+      ({
+        solid: "Ich würde sagen, das sitzt.",
+        shaky: "Ich würde sagen, das wackelt noch.",
+        todo: "Ich würde sagen, das muss ich nochmal üben.",
+      })[outcome],
+    voiceToolFailed:
+      "Werkzeug nicht verfügbar. Sag es der Schülerin oder dem Schüler und mach ohne weiter.",
+  },
 };
 
 export const learnerSentences = (language: CourseLanguage): LearnerSentences =>

@@ -1,0 +1,47 @@
+# Lernpfad für das Kapitel über arithmetische und geometrische Folgen: eine deutschsprachige
+# Mathematik-Fixture (spec 021), von Hand neben ihrem Pack geschrieben. Verweise wie „§4.2“ oder
+# „6.1.1“ zeigen auf das benachbarte Pack.
+
+id: folgen
+title: Arithmetische und geometrische Folgen
+
+sections:
+  - id: folgen
+    kind: teach
+    title: Folgen und arithmetische Folgen
+    goal: Eine Folge anhand ihrer Glieder lesen und mit einer arithmetischen Folge, ihrer Differenz und ihrem allgemeinen Glied arbeiten.
+    pack: ["§4.1", "§4.2"]
+    beats:
+      - Was eine Folge ist, mit a_n = 3n - 2 und ihren einzelnen Punkten in einem Graphen.
+      - Die Definition einer arithmetischen Folge und das allgemeine Glied a_n = a_1 + (n - 1) d.
+      - Die Summe der ersten n Glieder, am Beispiel des Kurses a_1 = 5 und d = 3.
+      - Kontrollfrage zur Anzahl der Schritte zwischen a_1 und a_n.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: geometrisch
+    kind: teach
+    title: Geometrische Folgen und welche Art es ist
+    goal: Mit einer geometrischen Folge arbeiten und entscheiden, ob eine Liste von Gliedern arithmetisch, geometrisch oder keins von beiden ist.
+    pack: ["§4.3", "§4.4"]
+    beats:
+      - Die Definition einer geometrischen Folge und das allgemeine Glied a_n = a_1 q^(n-1).
+      - Die Summe der ersten n Glieder und ihre Bedingung q ungleich 1, an a_1 = 2 und q = 3.
+      - Das Verfahren in drei Schritten zur Bestimmung der Art, an 3, 6, 12, 24 und 7, 4, 1, -2.
+      - Kontrollfrage zu einer Liste, die weder arithmetisch noch geometrisch ist.
+    done_when: Die Kontrollfrage ist beantwortet.
+
+  - id: uebungen
+    kind: practise
+    title: Aufgaben zu Folgen
+    goal: Glieder, Summen und Differenzen oder Quotienten bestimmen und die Art einer Folge erkennen.
+    exercises: ["6.1.1", "6.1.2", "6.2.1", "6.2.2", "6.3.1", "6.3.2", "6.3.3"]
+    count: 3
+    done_when: Drei Aufgaben gelöst, darunter eine zur Bestimmung der Art.
+
+  - id: zusammenfassung
+    kind: synthesis
+    title: Zusammenfassende Problemaufgaben
+    goal: Eine Situation in eine arithmetische oder eine geometrische Folge übersetzen und eine Frage dazu beantworten.
+    exercises: ["6.4.1", "6.4.2"]
+    count: 1
+    done_when: Eine Problemaufgabe gelöst.

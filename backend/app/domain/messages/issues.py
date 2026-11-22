@@ -35,6 +35,13 @@ WHERE_WORDS: dict[Locale, tuple[dict[str, str], list[tuple[re.Pattern[str], str]
             (re.compile(r"^section n°(\d+)$"), r"sectie nr. \1"),
         ],
     ),
+    "de": (
+        {"titre": "Titel", "chapitre": "Kapitel", "parcours": "Lernpfad"},
+        [
+            (re.compile(r"^exercice (\S+)$"), r"Aufgabe \1"),
+            (re.compile(r"^section n°(\d+)$"), r"Abschnitt Nr. \1"),
+        ],
+    ),
 }
 
 

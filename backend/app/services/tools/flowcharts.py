@@ -166,10 +166,16 @@ _HOLE_GAP_EN = (
     r"|to be (?:completed|filled in|filled|found|determined|specified)"
     r"|missing(?: here)?|hidden|unknown|mystery|tbd|tbc)"
 )
-# English puts the adjective first (« Missing step »), French after (« Étape manquante »).
-_HOLE_WORDS_EN = re.compile(
-    rf"{_HOLE_HEAD_EN}(?: {_HOLE_GAP_EN})?|{_HOLE_GAP_EN}(?: {_HOLE_HEAD_EN})?|[lc]?dots"
-)
+
+
+def _hole_words(head: str, gap: str) -> re.Pattern[str]:
+    """A box that only names a hole, with the gap word on either side of the head: English, Dutch and German put
+    the adjective first (« Missing step », « Ontbrekende stap », « Fehlender Schritt ») but also say « Step missing »,
+    unlike French (« Étape manquante »)."""
+    return re.compile(rf"{head}(?: {gap})?|{gap}(?: {head})?|[lc]?dots")
+
+
+_HOLE_WORDS_EN = _hole_words(_HOLE_HEAD_EN, _HOLE_GAP_EN)
 # The same list for a Dutch course (spec 017 §4.6), read on the same plain words (no case, accents or
 # punctuation): « In te vullen », « Vul aan », « ??? te vinden », « Ontbrekende stap », « Vak 3 : ? », « TBD ».
 _HOLE_HEAD_NL = r"(?:vak|stap|knoop|tekst|blok|vraag|antwoord|waarde)(?: nr)?(?: \d+)?"
@@ -181,11 +187,18 @@ _HOLE_GAP_NL = (
     r"|ontbrekende?(?: hier)?|ontbreekt(?: hier)?|leeg|lege|blanco|verborgen|onbekende?|mysterie|tbd)"
     r"(?: door (?:de )?leerling| door jou)?"
 )
-# Dutch puts the adjective first (« Ontbrekende stap »), as English does.
-_HOLE_WORDS_NL = re.compile(
-    rf"{_HOLE_HEAD_NL}(?: {_HOLE_GAP_NL})?|{_HOLE_GAP_NL}(?: {_HOLE_HEAD_NL})?|[lc]?dots"
+_HOLE_WORDS_NL = _hole_words(_HOLE_HEAD_NL, _HOLE_GAP_NL)
+# The same list for a German course (spec 021 §4.6), on the same plain words (« Ergänze » reads « erganze »,
+# « Lücke » « lucke »): « Auszufüllen », « Ergänze », « ??? zu bestimmen », « Fehlender Schritt », « Kasten 3: ? ».
+_HOLE_HEAD_DE = r"(?:kasten|feld|schritt|knoten|text|block|frage|antwort|wert)(?: nr)?(?: \d+)?"
+_HOLE_GAP_DE = (
+    r"(?:(?:von dir )?(?:noch )?(?:auszufullen|zu erganzen|zu (?:finden|bestimmen|berechnen|schreiben|setzen))"
+    r"|erganze|erganzen|fehlt(?: hier)?|fehlende[rs]?|lucke|leer(?:e[rs]?)?|versteckt(?:e[rs]?)?"
+    r"|unbekannt(?:e[rs]?)?|geheim|tbd)"
+    r"(?: von dir)?"
 )
-HOLE_WORDS = by_language(fr=_HOLE_WORDS, en=_HOLE_WORDS_EN, nl=_HOLE_WORDS_NL)
+_HOLE_WORDS_DE = _hole_words(_HOLE_HEAD_DE, _HOLE_GAP_DE)
+HOLE_WORDS = by_language(fr=_HOLE_WORDS, en=_HOLE_WORDS_EN, nl=_HOLE_WORDS_NL, de=_HOLE_WORDS_DE)
 
 
 def _plain_words(text: str) -> str:

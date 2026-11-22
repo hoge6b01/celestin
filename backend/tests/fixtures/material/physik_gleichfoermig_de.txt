@@ -1,0 +1,53 @@
+PHYSIK Klasse 10 — Einheit 5: Gleichförmige geradlinige Bewegung
+
+1) Bezugssystem und Bahn
+Eine Bewegung wird immer in Bezug auf ein Bezugssystem beschrieben, das heißt auf einen
+Bezugskörper, der als ruhend betrachtet wird.
+Beispiel: Wer in einem Bus sitzt, ist in Ruhe in Bezug auf den Bus, aber in Bewegung in Bezug
+auf den Gehweg.
+
+Die Bahn ist die Menge aller aufeinanderfolgenden Orte eines Punktes des bewegten Körpers.
+Ist die Bahn eine Gerade, so ist die Bewegung geradlinig.
+
+2) Durchschnittsgeschwindigkeit
+Definition: Die Durchschnittsgeschwindigkeit eines bewegten Körpers ist der zurückgelegte Weg
+geteilt durch die Zeitdauer.
+v = Δx / Δt
+v: Geschwindigkeit (m/s)
+Δx: zurückgelegter Weg (m)
+Δt: Zeitdauer (s)
+
+Umrechnung: 1 m/s = 3,6 km/h. Um km/h in m/s umzurechnen, teilt man durch 3,6.
+Beispiel: 72 km/h = 72 : 3,6 = 20 m/s
+
+3) Gleichförmige geradlinige Bewegung
+Definition: Ein Körper führt eine gleichförmige geradlinige Bewegung aus, wenn seine Bahn eine
+Gerade und seine Geschwindigkeit konstant ist.
+
+Bewegungsgleichung: x = x₀ + v·t
+x₀: Anfangsort (m); x: Ort zum Zeitpunkt t (m)
+
+Diagramme einer gleichförmigen Bewegung:
+- das x(t)-Diagramm ist eine Gerade, deren Steigung die Geschwindigkeit v ist;
+- das v(t)-Diagramm ist eine waagerechte Gerade.
+
+Versuch im Physikraum: Ein Wagen fährt auf einer waagerechten Fahrbahn; sein Ort wird alle 2 s notiert.
+Die in gleichen Zeitdauern zurückgelegten Wege sind gleich: Die Bewegung ist gleichförmig.
+t (s): 0 ; 2 ; 4 ; 6 ; 8
+x (m): 1,0 ; 2,5 ; 4,0 ; 5,5 ; 7,0
+[x(t)-Diagramm hier ins Heft eingeklebt]
+
+AUFGABEN
+1. Ein Auto legt 180 km in 2 h 30 min zurück. Berechne seine Durchschnittsgeschwindigkeit in km/h und in m/s.
+Lösung: v = 180 : 2,5 = 72 km/h = 20 m/s
+
+2. Eine Läuferin bewegt sich mit der konstanten Geschwindigkeit 12 km/h. Welchen Weg legt sie in 30 min zurück?
+Gegeben: v = 12 km/h ; Δt = 30 min
+Lösung: Δx = v·Δt = 12 · 30 = 360 km
+
+3. Ein Radfahrer startet bei x₀ = 500 m und fährt mit 5 m/s. Stelle die Bewegungsgleichung auf und
+berechne den Ort nach 2 min.
+Lösung: x = 500 + 5·t (x in m, t in s) ; nach 120 s: x = 1100 m
+
+4. Lies die Geschwindigkeit des Wagens aus dem Diagramm des Versuchs ab.
+Lösung: v = 0,75 m/s

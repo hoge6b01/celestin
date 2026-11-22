@@ -183,3 +183,25 @@ def test_the_event_of_an_outcome_carries_the_marker_in_dutch() -> None:
     assert event_of(started, "nl").marker == "sectie begonnen · 1. Inleiding"
     assert event_of(BoardCleared(marker=CLEAR_MARKER), "nl").marker == "bord gewist"
     assert marker_for("clear_board", {}, "nl") == "bord gewist"
+
+
+# --- spec 021: the German interface --------------------------------------------------
+
+
+def test_subjects_and_titles_in_german() -> None:
+    assert render("subject.mathematics", "de") == "Mathematik"
+    assert authoring_message(_chapter("timeout"), "de") != authoring_message(_chapter("timeout"), "fr")  # type: ignore[arg-type]
+    assert display_title(2, "Folgen", "de").startswith("Kapitel 2") and "Folgen" in display_title(2, "Folgen", "de")
+
+
+@pytest.mark.parametrize(("card", "key"), CARDS)
+def test_every_card_kind_has_its_marker_in_german(card: type, key: str) -> None:
+    assert card.marker.render("de") not in (card.marker.render("fr"), card.marker.render("en"), card.marker.render("nl"))
+
+
+def test_the_event_of_an_outcome_carries_the_marker_in_german() -> None:
+    section = SimpleNamespace(id="intro", label="1. Einleitung")
+    started = SectionStarted(section=section, review=False, output="o", marker=Marker("marker.section_started", label="1. Einleitung"))  # type: ignore[arg-type]
+    assert event_of(started, "de").marker == "Abschnitt begonnen · 1. Einleitung"
+    assert event_of(BoardCleared(marker=CLEAR_MARKER), "de").marker == "Tafel gewischt"
+    assert marker_for("clear_board", {}, "de") == "Tafel gewischt"

@@ -13,7 +13,7 @@ def test_four_broad_subjects_with_french_labels():
 
 def test_every_subject_is_available_in_french_english_and_dutch():
     assert [s.id for s in available_subjects()] == ["mathematics", "sciences", "languages", "general"]
-    assert all(s.languages == ("fr", "en", "nl") for s in available_subjects())
+    assert all(s.languages == ("fr", "en", "nl", "de") for s in available_subjects())
 
 
 def test_require_available_accepts_available_subjects():

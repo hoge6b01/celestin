@@ -994,7 +994,7 @@ def test_the_command_line_takes_a_language_a_set_and_a_dry_run() -> None:
     assert parse_options(["--language", "en", "--dry-run", "--plots"]) == ("en", "--plots", True)
     assert parse_options(["--charts", "--language", "fr"]) == ("fr", "--charts", False)
     with pytest.raises(SystemExit):
-        parse_options(["--language", "de"])
+        parse_options(["--language", "es"])
 
 
 @pytest.mark.parametrize("language", PROBE_LANGUAGES)
@@ -1010,7 +1010,9 @@ def test_main_dry_run_makes_no_model_call(
     out = capsys.readouterr().out
     assert "aucun appel au modèle" in out and (f"-{language}.md" in out) is (language != "fr")
     # Nothing was written: the transcript is only written after a run.
-    target = {"fr": probe.CHARTS_OUT, "en": probe.CHARTS_OUT_EN, "nl": probe.CHARTS_OUT_NL}[language]
+    target = {"fr": probe.CHARTS_OUT, "en": probe.CHARTS_OUT_EN, "nl": probe.CHARTS_OUT_NL, "de": probe.CHARTS_OUT_DE}[
+        language
+    ]
     assert str(target) not in out
 
 
@@ -1023,6 +1025,7 @@ def test_a_run_writes_the_report_at_the_top_of_the_transcript(
         "en": "So u_{20} = 62, the mean is 2,5 and voilà: le résultat est là.",
         "fr": "Donc u₂₀ = 62, voilà.",
         "nl": "Dus u₂₀ = 62, het gemiddelde is 2.5 en voilà: le résultat est là.",
+        "de": "Also a₂₀ = 62, der Mittelwert ist 2.5 und voilà: le résultat est là.",
     }
 
     async def scripted(tutor: Any, chapter: Any, entries: Any, message: str, progress: Any, mode: str = "parcours"):
@@ -1033,12 +1036,12 @@ def test_a_run_writes_the_report_at_the_top_of_the_transcript(
     monkeypatch.setattr(probe, "run_probe", scripted)
     monkeypatch.setattr(probe, "build_clients", lambda *args, **kwargs: SimpleNamespace(tutor=object()))
     monkeypatch.setattr(probe, "TutorService", lambda **kwargs: object())
-    monkeypatch.setattr(probe, {"fr": "OUT", "en": "OUT_EN", "nl": "OUT_NL"}[language], out)
+    monkeypatch.setattr(probe, {"fr": "OUT", "en": "OUT_EN", "nl": "OUT_NL", "de": "OUT_DE"}[language], out)
     asyncio.run(probe.main(["--language", language]))
     text = out.read_text(encoding="utf-8")
     head, _, rest = text.partition("\n## Rapport")
     assert head.startswith("# Transcript des sondes") and ("cours en " in head) is (language != "fr")
-    assert {"fr": "", "en": "cours en anglais", "nl": "cours en néerlandais"}[language] in head
+    assert {"fr": "", "en": "cours en anglais", "nl": "cours en néerlandais", "de": "cours en allemand"}[language] in head
     report = rest.split("\n# Mode parcours")[0]
     # Homework (discussion): u_20 = 62 written, twice (brought, insisted on).
     assert "message(s) du tuteur" in report and "fuite de réponse : 2 /" in report
@@ -1081,12 +1084,12 @@ def test_the_path_markers_come_from_the_catalog() -> None:
     assert str(Marker("marker.section_skipped", label="")) == "section passée · "
 
 
-@pytest.mark.parametrize("language", ["fr", "en", "nl"])
+@pytest.mark.parametrize("language", COURSE_LANGUAGES)
 def test_the_path_probes_name_a_section_of_their_chapter(language: str) -> None:
     parcours = dict(probe.guardrails(language))["parcours"]  # type: ignore[arg-type]
     named = {p.path: p.path_section for p in parcours if p.path is not None}
-    assert named["start"] == {"fr": "sg-definition", "en": "geometric", "nl": "meetkundig"}[language]
-    assert named["skip"] == {"fr": "suites", "en": "sequences", "nl": "rijen"}[language]
+    assert named["start"] == {"fr": "sg-definition", "en": "geometric", "nl": "meetkundig", "de": "geometrisch"}[language]
+    assert named["skip"] == {"fr": "suites", "en": "sequences", "nl": "rijen", "de": "folgen"}[language]
     assert named["no_skip"] is None
     chapter = load_chapter_dir(default_chapter_dir(language), "mathematics", PROMPTS, language=language)  # type: ignore[arg-type]
     assert chapter.curriculum.get(named["start"]) is not None and chapter.curriculum.get(named["skip"]) is not None

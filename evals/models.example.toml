@@ -5,7 +5,7 @@
 #   uv run python -m harness run  --models models.toml
 
 [defaults]
-language = "fr"              # the course language the cases run in: fr | en
+language = "fr"              # the course language the cases run in: fr | en | nl | de
 runs = 3                     # tutor trials per case (small models are noisy: never run once)
 authoring_runs = 1           # authoring is slow and expensive; one pass per fixture is a start
 sets = ["guardrails"]        # guardrails | charts | flowcharts | figures | plots

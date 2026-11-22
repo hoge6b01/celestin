@@ -6,6 +6,7 @@ import pytest
 
 from app.config import Settings
 from app.domain.language import COURSE_LANGUAGES
+from app.domain.subject import OFFERED
 from scripts.chapter_files import DEFAULT_CHAPTER_DIR, DEFAULT_ENGLISH_CHAPTER_DIR, default_chapter_dir
 from scripts.smoke import SECOND_TURN, context_for, language_of, load_lesson
 from scripts.voice_probe import PROBES, unspeakable
@@ -22,11 +23,19 @@ def test_the_dutch_chapter_is_the_default_of_a_dutch_run() -> None:
     assert default_chapter_dir("nl") == DEFAULT_DUTCH_CHAPTER_DIR and DEFAULT_DUTCH_CHAPTER_DIR.is_dir()
 
 
+def test_the_german_chapter_is_the_default_of_a_german_run() -> None:
+    from scripts.chapter_files import DEFAULT_GERMAN_CHAPTER_DIR
+
+    assert default_chapter_dir("de") == DEFAULT_GERMAN_CHAPTER_DIR and DEFAULT_GERMAN_CHAPTER_DIR.is_dir()
+    assert DEFAULT_GERMAN_CHAPTER_DIR.name == "folgen_de"
+
+
 def test_language_of_reads_the_flag() -> None:
     assert language_of(["x"]) == "fr" and language_of(["x", "--language", "en"]) == "en"
     assert language_of(["x", "--language", "nl"]) == "nl"
+    assert language_of(["x", "--language", "de"]) == "de"
     with pytest.raises(SystemExit):
-        language_of(["--language", "de"])
+        language_of(["--language", "es"])
 
 
 def test_load_lesson_loads_the_english_chapter_in_english() -> None:
@@ -44,7 +53,15 @@ def test_load_lesson_loads_the_dutch_chapter_in_dutch() -> None:
     prompts, chapter = load_lesson(settings, ["--language", "nl"])
     assert chapter.language == "nl" and chapter.title == "Rekenkundige en meetkundige rijen"
     assert context_for(chapter).language == "nl"
-    assert len({prompts.tutor(language) for language in COURSE_LANGUAGES}) == 3
+    assert len({prompts.tutor(language) for language in OFFERED}) == len(OFFERED)
+
+
+def test_load_lesson_loads_the_german_chapter_in_german() -> None:
+    settings = Settings(openai_api_key="k", _env_file=None)
+    prompts, chapter = load_lesson(settings, ["--language", "de"])
+    assert chapter.language == "de" and chapter.title == "Arithmetische und geometrische Folgen"
+    assert context_for(chapter).language == "de"
+    assert len({prompts.tutor(language) for language in COURSE_LANGUAGES}) == len(COURSE_LANGUAGES)
 
 
 def test_every_language_has_a_second_turn_and_voice_probes() -> None:
@@ -69,6 +86,11 @@ def test_every_language_has_a_second_turn_and_voice_probes() -> None:
         ("Tel 2,5 op bij x kwadraat.", "nl", False),
         ("Neem x^2.", "nl", True),
         ("Kijk naar $u_n$.", "nl", True),
+        ("Schreib x Quadrat und addiere zwei Komma fünf.", "de", False),
+        ("Addiere 2,5 zu x Quadrat.", "de", False),
+        ("Nimm x^2.", "de", True),
+        ("Schau dir $u_n$ an.", "de", True),
+        ("Nimm \\frac der beiden.", "de", True),
     ],
 )
 def test_what_a_voice_cannot_say(text: str, language: str, bad: bool) -> None:
@@ -115,9 +137,23 @@ def test_the_dutch_authoring_fixtures_are_dutch_and_the_injection_is_a_dutch_inj
     assert "instructies" in injection.lower() and "ignore" not in injection.lower()
 
 
+def test_the_german_authoring_fixtures_are_german_and_the_injection_is_a_german_injection() -> None:
+    from scripts.authoring_eval import FIXTURES, MATERIAL
+
+    names = [name for name, _ in FIXTURES["de"]]
+    assert names == [
+        "maths_quadratisch_de.txt",
+        "physik_gleichfoermig_de.txt",
+        "injection_de.txt",
+        "maths_statistik_de.txt",
+    ]
+    injection = (MATERIAL / "injection_de.txt").read_text(encoding="utf-8")
+    assert "Anweisungen" in injection and "ignore" not in injection.lower() and "instructies" not in injection.lower()
+
+
 @pytest.mark.parametrize(
     ("language", "directory"),
-    [("fr", "mru"), ("en", "uniform_motion_en"), ("nl", "eenparige_beweging_nl")],
+    [("fr", "mru"), ("en", "uniform_motion_en"), ("nl", "eenparige_beweging_nl"), ("de", "gleichfoermige_bewegung_de")],
 )
 def test_the_smoke_revision_leg_runs_on_its_own_fixtures_whatever_the_subject(language, directory) -> None:
     """Spec 020: `smoke --subject sciences --chapter-dir …/mru` used to load the mathematics révision fixtures with

@@ -91,6 +91,12 @@ WORDS = by_language(
         only_active="Alleen de huidige sectie kan worden afgerond: “{label}” (id: {id}).",
         skip_done="Sectie “{label}” is al afgerond: ze kan niet overgeslagen worden.",
     ),
+    de=Words(
+        unknown="Abschnitt „{section_id}“ gibt es nicht. Abschnitte des Kapitels: {ids}.",
+        none_active="Kein Abschnitt ist in Arbeit. Beginne einen mit start_section.",
+        only_active="Nur der aktuelle Abschnitt kann abgeschlossen werden: „{label}“ (id: {id}).",
+        skip_done="Abschnitt „{label}“ ist schon abgeschlossen: Er kann nicht übersprungen werden.",
+    ),
 )
 
 

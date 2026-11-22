@@ -26,9 +26,9 @@ def test_the_table_is_byte_identical_to_the_frontends() -> None:
 
 
 def test_the_supported_list() -> None:
-    assert LOCALES == ("fr", "en", "nl")
+    assert LOCALES == ("fr", "en", "nl", "de")
     assert DEFAULT_LOCALE == "fr"
-    assert is_locale("en") and not is_locale("de") and not is_locale(None)
+    assert is_locale("en") and not is_locale("es") and not is_locale(None)
 
 
 @pytest.mark.parametrize(
@@ -40,10 +40,28 @@ def test_the_supported_list() -> None:
         ("nl-BE;q=0.8,fr;q=0.9", "fr"),
         ("fr,nl;q=0.8", "fr"),
         ("nl;q=0", "fr"),
-        ("de,nl;q=0.5", "nl"),
+        ("es,nl;q=0.5", "nl"),
         ("en-GB,nl;q=0.4", "en"),
     ],
 )
 def test_dutch_headers(header: str, expected: str) -> None:
     """Spec 017 R1.3: `nl`, `nl-BE` and `nl-NL` all resolve to `nl` (the shared table follows in the frontend phase)."""
+    assert parse_accept_language(header) == expected
+
+
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [
+        ("de", "de"),
+        ("de-DE", "de"),
+        ("de-AT", "de"),
+        ("de-CH", "de"),
+        ("de-DE;q=0.8,fr;q=0.9", "fr"),
+        ("fr,de;q=0.8", "fr"),
+        ("de;q=0", "fr"),
+        ("es,de;q=0.5", "de"),
+    ],
+)
+def test_german_headers(header: str, expected: str) -> None:
+    """Spec 021 R1.3: `de`, `de-DE`, `de-AT` and `de-CH` all resolve to `de`."""
     assert parse_accept_language(header) == expected

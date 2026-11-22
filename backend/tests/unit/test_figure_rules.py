@@ -444,3 +444,11 @@ def test_a_number_is_read_the_way_each_course_language_writes_it() -> None:
 
     assert set(NUMBER) == set(COURSE_LANGUAGES)
     assert _number("1,5", "fr") == 1.5 and _number("1,500", "en") == 1500.0
+
+
+def test_bare_reads_a_latex_bar_as_the_bar_it_draws() -> None:
+    """Spec 021 §4.6: a German point `P(2 \\mid -1{,}5)` must reach the rules as `P(2|-1,5)`."""
+    from app.services.tools.figures import _bare
+
+    assert _bare(r"$P(2 \mid -1{,}5)$") == "P(2|-1,5)"
+    assert _bare(r"$\vert x \vert$") == "|x|"

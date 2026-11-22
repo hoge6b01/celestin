@@ -61,6 +61,7 @@ class Words:
     discussion_finished: str
     discussion_none_active: str  # {label} {kind}
     moment: str  # {weekday} {day} {month} {hour} {minute} {part}
+    date: str  # {day} {month}: a self-assessment's date in the révision state
     days: tuple[str, ...]
     months: tuple[str, ...]
     parts: tuple[str, str, str]  # morning, afternoon, evening
@@ -113,6 +114,7 @@ WORDS = by_language(
             "Aucune section en cours. La prochaine serait « {label} » ({kind}), à faire dans le parcours."
         ),
         moment="{weekday} {day} {month}, {hour} h {minute:02d} ({part})",
+        date="{day} {month}",
         days=("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"),
         months=(
             "janvier", "février", "mars", "avril", "mai", "juin",
@@ -166,6 +168,7 @@ WORDS = by_language(
             "No section in progress. The next would be “{label}” ({kind}), to do in the path."
         ),
         moment="{weekday} {day} {month}, {hour}:{minute:02d} ({part})",
+        date="{day} {month}",
         days=("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
         months=(
             "January", "February", "March", "April", "May", "June",
@@ -221,12 +224,67 @@ WORDS = by_language(
             "Geen sectie bezig. De volgende zou “{label}” ({kind}) zijn, te doen in het traject."
         ),
         moment="{weekday} {day} {month}, {hour}:{minute:02d} ({part})",
+        date="{day} {month}",
         days=("maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"),
         months=(
             "januari", "februari", "maart", "april", "mei", "juni",
             "juli", "augustus", "september", "oktober", "november", "december",
         ),
         parts=("voormiddag", "namiddag", "avond"),
+    ),
+    de=Words(
+        overview_heading="## Lernpfad des Kapitels „{title}“",
+        lead_parcours="Abschnitte in der Reihenfolge, die du vorschlägst.",
+        lead_discussion=(
+            "Abschnitte in der Reihenfolge. Das ist der Lernpfad des Kapitels: Er wird im Lernpfad-Modus "
+            "verfolgt, nicht hier. Du kannst deiner Schülerin oder deinem Schüler sagen, wo ein Begriff "
+            "behandelt wird, und anbieten, dorthin zu gehen; du kannst keinen Abschnitt öffnen oder abschließen."
+        ),
+        overview_line="{index}. `{id}` ({kind}) — {title}. {goal}",
+        brief_head="Abschnitt „{label}“ ({kind}), {index}/{total}.",
+        review="Wiederholung: Dieser Abschnitt ist schon abgeschlossen. Schließ ihn nicht noch einmal ab.",
+        goal="Ziel: {goal}",
+        beats_head="Ablauf:",
+        beat="{index}. {beat}",
+        exercises="Typische Aufgaben: {exercises}.",
+        exercises_separator="; ",
+        to_do="Zu tun: {count} Aufgabe(n), eine nach der anderen.",
+        done_when="Abgeschlossen, wenn: {done_when}",
+        completed="Abschnitt abgeschlossen.",
+        skipped_head="Abschnitt übersprungen.",
+        following_last="Kapitel abgeschlossen.",
+        finished_all="Kapitel abgeschlossen: Jeder Abschnitt ist erledigt oder übersprungen.",
+        following_next="Nächster Abschnitt: „{label}“ ({kind}), id: {id}.",
+        following_active="Abschnitt noch in Arbeit: „{label}“ ({kind}), id: {id}.",
+        now="Es ist {moment}.",
+        status="Stand des Lernpfads: {done} von {total} Abschnitt(en) abgeschlossen.",
+        status_skipped="Stand des Lernpfads: {done} abgeschlossen und {skipped} übersprungen, von {total} Abschnitt(en).",
+        skipped_list="Übersprungene Abschnitte: {labels}.",
+        skipped_label="„{label}“",
+        active="Aktueller Abschnitt: „{label}“ ({kind}).",
+        active_hint=(
+            "Wenn du seinen Plan in diesem Gespräch noch nicht hast, ruf "
+            'start_section("{id}") auf.'
+        ),
+        finished="Kapitel abgeschlossen. Biete die Wiederholung eines beliebigen Abschnitts an.",
+        finished_skipped_offer="Biete an, einen übersprungenen Abschnitt zu machen oder einen abgeschlossenen zu wiederholen.",
+        none_active="Kein Abschnitt in Arbeit. Als Nächstes: „{label}“ ({kind}).",
+        start_hint='Beginne ihn mit start_section("{id}").',
+        discussion_active=(
+            "Aktueller Abschnitt im Lernpfad: „{label}“ ({kind}), dort weiterzumachen."
+        ),
+        discussion_finished="Kapitel abgeschlossen: Der ganze Lernpfad ist erledigt.",
+        discussion_none_active=(
+            "Kein Abschnitt in Arbeit. Der nächste wäre „{label}“ ({kind}), im Lernpfad zu machen."
+        ),
+        moment="{weekday}, {day}. {month}, {hour}:{minute:02d} Uhr ({part})",
+        date="{day}. {month}",
+        days=("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"),
+        months=(
+            "Januar", "Februar", "März", "April", "Mai", "Juni",
+            "Juli", "August", "September", "Oktober", "November", "Dezember",
+        ),
+        parts=("vormittags", "nachmittags", "abends"),
     ),
 )
 
@@ -305,6 +363,27 @@ REPRISE = by_language(
             "exercise": "oefening",
             "check_question": "begripsvraag",
             "recap": "samenvatting",
+        },
+    ),
+    de=RepriseWords(
+        head=(
+            "Wiederaufnahme: An diesem Abschnitt wurde schon in einer früheren Sitzung gearbeitet. "
+            "Bereits gezeigte Karten, in Reihenfolge:"
+        ),
+        older="(und {count} ältere Karte(n))",
+        line="- {kind}: {title}",
+        line_untitled="- {kind}",
+        tail=(
+            "Sag deiner Schülerin oder deinem Schüler in einem Satz, wo ihr stehen geblieben wart, und mach nach "
+            "der letzten Karte weiter, ohne den Abschnitt neu zu beginnen."
+        ),
+        kinds={
+            "title": "Titel",
+            "explanation": "Erklärung",
+            "worked_example": "Musterbeispiel",
+            "exercise": "Aufgabe",
+            "check_question": "Kontrollfrage",
+            "recap": "Rückblick",
         },
     ),
 )
@@ -537,8 +616,6 @@ class RevisionWords:
     outcomes: dict[Outcome, str]  # outcome -> its word
 
 
-# A self-assessment's date in the state message, in every course language: « 15 novembre ».
-_DATE = "{day} {month}"
 
 
 REVISION = by_language(
@@ -618,6 +695,30 @@ REVISION = by_language(
         tally="Zelfbeoordeling genoteerd. Deze herhaling: {solid} gekend, {shaky} wankel, {todo} te herhalen ({count} sectie(s) genoteerd).",
         outcomes={"solid": "gekend", "shaky": "wankel", "todo": "te herhalen"},
     ),
+    de=RevisionWords(
+        pack_head="# Kapitel {number} — {title}",
+        overview_heading="## Die Kapitel dieser Wiederholung",
+        overview_lead=(
+            "Die Abschnitte jedes Kapitels, in Reihenfolge. Das sind die Lernpfade der Kapitel: Sie werden im "
+            "Lernpfad-Modus verfolgt, nicht hier, und du kannst keinen Abschnitt öffnen oder abschließen. Ein "
+            "Kapitel wird mit seiner Nummer benannt, ein Abschnitt mit seiner id."
+        ),
+        overview_chapter="### Kapitel {number} — „{title}“",
+        chapter_status=(
+            "Kapitel {number} — „{title}“: {done} Abschnitt(e) abgeschlossen, {skipped} übersprungen und {todo} "
+            "nie gemacht, von {total}."
+        ),
+        done_list="- Abgeschlossen: {labels}.",
+        skipped_list="- Übersprungen, nie mit dir bearbeitet: {labels}.",
+        todo_list="- Nie gemacht: {labels}.",
+        earlier="- Letzte Selbsteinschätzungen: {items}.",
+        earlier_item="„{label}“: {outcome} ({date})",
+        earlier_separator="; ",
+        none_noted="Diese Wiederholung: noch nichts notiert.",
+        noted="Diese Wiederholung: {count} Abschnitt(e) notiert — {solid} sitzt, {shaky} wackelt, {todo} nochmal üben.",
+        tally="Selbsteinschätzung notiert. Diese Wiederholung: {solid} sitzt, {shaky} wackelt, {todo} nochmal üben ({count} Abschnitt(e) notiert).",
+        outcomes={"solid": "sitzt", "shaky": "wackelt", "todo": "nochmal üben"},
+    ),
 )
 
 
@@ -658,7 +759,7 @@ def revision_tally(tally: Tally, language: CourseLanguage = DEFAULT_COURSE_LANGU
 def _date(at: datetime, now: datetime | None, language: CourseLanguage) -> str:
     if now is not None and now.tzinfo is not None:
         at = at.astimezone(now.tzinfo)
-    return _DATE.format(day=at.day, month=WORDS[language].months[at.month - 1])
+    return WORDS[language].date.format(day=at.day, month=WORDS[language].months[at.month - 1])
 
 
 def revision_state(

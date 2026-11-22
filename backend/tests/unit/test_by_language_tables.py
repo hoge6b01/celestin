@@ -48,8 +48,8 @@ def test_the_tables_are_found() -> None:
 def test_a_table_missing_a_language_fails_at_import(module: str) -> None:
     code = (
         "import app.domain.language as l\n"
-        "l.COURSE_LANGUAGES = l.COURSE_LANGUAGES + ('de',)\n"
+        "l.COURSE_LANGUAGES = l.COURSE_LANGUAGES + ('xx',)\n"
         f"import {module}\n"
     )
     result = subprocess.run([sys.executable, "-c", code], cwd=BACKEND, capture_output=True, text=True)
-    assert result.returncode != 0 and "by_language: missing ['de']" in result.stderr, result.stderr[-400:]
+    assert result.returncode != 0 and "by_language: missing ['xx']" in result.stderr, result.stderr[-400:]

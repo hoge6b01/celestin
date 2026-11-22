@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from harness.config import AMBIENT_AI_VARS, ConfigError, ModelSpec, load, load_dotenv, parse, redact, worker_env
+from harness.config import AMBIENT_AI_VARS, LANGUAGES, ConfigError, ModelSpec, load, load_dotenv, parse, redact, worker_env
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "models.example.toml"
 
@@ -42,7 +42,7 @@ def test_a_wrong_file_says_what_is_wrong(bad, message):
         parse(bad)
 
 
-@pytest.mark.parametrize("language", ["fr", "en", "nl"])
+@pytest.mark.parametrize("language", LANGUAGES)
 def test_every_course_language_is_accepted_as_a_default(language):
     config = parse({"defaults": {"language": language}, **raw()})
     assert config.defaults.language == language
@@ -50,7 +50,7 @@ def test_every_course_language_is_accepted_as_a_default(language):
 
 def test_an_unknown_language_is_refused():
     with pytest.raises(ConfigError, match="not one of"):
-        parse({"defaults": {"language": "de"}, **raw()})
+        parse({"defaults": {"language": "es"}, **raw()})
 
 
 def test_select_names_the_unknown_model():

@@ -34,6 +34,7 @@ KIND_LABELS = by_language(
     fr=KIND_LABEL_FR,
     en={"teach": "lesson", "practise": "practice", "synthesis": "summary"},
     nl={"teach": "les", "practise": "oefeningen", "synthesis": "samenvatting"},
+    de={"teach": "Lektion", "practise": "Übungen", "synthesis": "Zusammenfassung"},
 )
 
 Text = Annotated[str, Field(min_length=1, max_length=600)]

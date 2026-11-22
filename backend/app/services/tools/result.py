@@ -71,6 +71,10 @@ _WORDS = by_language(
         unknown_chapter="Hoofdstuk {number} hoort niet bij deze herhaling. Hoofdstukken van de herhaling: {numbers}.",
         unknown_section="De sectie “{section_id}” zit niet in hoofdstuk {number}. Secties van dit hoofdstuk: {ids}.",
     ),
+    de=_Words(
+        unknown_chapter="Kapitel {number} gehört nicht zu dieser Wiederholung. Kapitel der Wiederholung: {numbers}.",
+        unknown_section="Der Abschnitt „{section_id}“ ist nicht in Kapitel {number}. Abschnitte dieses Kapitels: {ids}.",
+    ),
 )
 
 

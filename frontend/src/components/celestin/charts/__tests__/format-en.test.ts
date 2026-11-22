@@ -3,6 +3,7 @@ import {
   DUTCH,
   ENGLISH,
   FRENCH,
+  GERMAN,
   formatInterval,
   formatNumber,
   formatPair,
@@ -41,6 +42,30 @@ describe("the notation of each course language", () => {
     expect(notationFor("fr")).toBe(FRENCH);
     expect(notationFor("en")).toBe(ENGLISH);
     expect(notationFor("nl")).toBe(DUTCH);
+    expect(notationFor("de")).toBe(GERMAN);
+  });
+
+  it("writes the NRW notation for a German course: the French one with a bar in points (spec 021)", () => {
+    expect(GERMAN.number(0.45)).toBe("0,45");
+    expect(GERMAN.number(1000)).toBe("1000");
+    expect(GERMAN.number(10000).replace(/\s/g, " ")).toBe("10 000");
+    expect(GERMAN.value(12.5, "pourcentage").replace(/\s/g, " ")).toBe("12,5 %");
+    expect(GERMAN.pair(2, -1.5)).toBe("(2 | −1,5)");
+    expect(GERMAN.interval(2, 5, true, false)).toBe("[2; 5[");
+    expect(GERMAN.interval(null, 2, false, true)).toBe("]−∞; 2]");
+    expect(GERMAN.measureName).toEqual({
+      effectif: "Häufigkeit",
+      frequence: "Relative Häufigkeit",
+      pourcentage: "Prozent",
+    });
+    expect(GERMAN.boxStats).toEqual([
+      "Minimum",
+      "unteres Quartil",
+      "Median",
+      "oberes Quartil",
+      "Maximum",
+    ]);
+    expect(GERMAN).not.toBe(FRENCH);
   });
 
   it.each(CASES as Row[])("writes $kind $args as $text ($language)", (row) => {

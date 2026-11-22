@@ -43,10 +43,10 @@ async def test_every_subject_takes_a_dutch_course(client: AsyncClient, subject: 
 async def test_dutch_is_offered_for_every_subject(client: AsyncClient) -> None:
     subjects = (await client.get("/api/subjects")).json()["subjects"]
     assert [s["id"] for s in subjects] == list(SUBJECTS)
-    assert all(s["languages"] == ["fr", "en", "nl"] for s in subjects)
+    assert all(s["languages"] == ["fr", "en", "nl", "de"] for s in subjects)
 
 
-@pytest.mark.parametrize("language", ["de", "nl-BE", "NL", ""])
+@pytest.mark.parametrize("language", ["es", "nl-BE", "NL", ""])
 async def test_an_unsupported_dutch_spelling_is_refused(client: AsyncClient, language: str) -> None:
     r = await client.post("/api/courses", json={"name": "X", "subject": "sciences", "language": language})
     assert r.status_code == 422 and r.json()["code"] == "invalid_language"

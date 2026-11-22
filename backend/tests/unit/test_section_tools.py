@@ -264,6 +264,7 @@ def test_a_call_stored_before_spec_019_is_replayed_from_the_progress_now() -> No
         ("fr", "La section « 1. Introduction » est déjà faite : elle ne peut pas être passée."),
         ("en", "Section “1. Introduction” is already done: it cannot be skipped."),
         ("nl", "Sectie “1. Introduction” is al afgerond: ze kan niet overgeslagen worden."),
+        ("de", "Abschnitt „1. Introduction“ ist schon abgeschlossen: Er kann nicht übersprungen werden."),
     ],
 )
 def test_skip_a_done_section_is_refused_in_the_courses_language(language: str, refusal: str) -> None:

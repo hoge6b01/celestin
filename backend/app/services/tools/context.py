@@ -37,6 +37,7 @@ SAVE_FAILED = by_language(
     fr="Je n'ai pas pu enregistrer ta progression. Réessaie.",
     en="I could not save your progress. Try again.",
     nl="Ik kon je voortgang niet opslaan. Probeer opnieuw.",
+    de="Ich konnte deinen Fortschritt nicht speichern. Versuch es noch einmal.",
 )
 
 

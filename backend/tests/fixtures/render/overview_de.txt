@@ -1,0 +1,7 @@
+## Lernpfad des Kapitels „Minikapitel“
+
+Abschnitte in der Reihenfolge, die du vorschlägst.
+
+1. `intro` (Lektion) — Einleitung. Verstehen, worum es geht.
+2. `exos` (Übungen) — Übungen. Anwenden.
+3. `bilan` (Zusammenfassung) — Zusammenfassung. Alles gemischt.

@@ -729,3 +729,20 @@ def test_latex_in_an_expression_reaches_the_parser() -> None:
     broken = {**VALID["parabola"], "curves": [{"expr": "\\frac{1}{x}"}]}
     with pytest.raises(ToolValidationError, match="pas du LaTeX"):
         registry.execute("display_board", _explain(broken), CTX)
+
+
+def test_members_cover_every_course_language() -> None:
+    from app.domain.language import COURSE_LANGUAGES
+    from app.services.tools.plots import MEMBERS
+
+    assert set(MEMBERS) == set(COURSE_LANGUAGES)
+
+
+@pytest.mark.parametrize("language", ["fr", "en", "nl"])
+def test_a_latex_bar_reads_as_a_bar_and_no_existing_language_splits_on_it(language: str) -> None:
+    """Spec 021 §4.3: `\\mid` becomes `|` before the groups are read; for French, English and Dutch a bar
+    is not a member separator, so nothing they accepted or refused before changes."""
+    from app.services.tools.plots import gives_away
+
+    assert gives_away(r"$(2 \mid 3)$", language) == gives_away("(2|3)", language) is False
+    assert gives_away("(2 ; 3)", language) is True

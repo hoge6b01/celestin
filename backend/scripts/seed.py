@@ -25,7 +25,7 @@ from app.services.prompts import PromptLibrary
 from scripts.chapter_files import DEFAULT_CHAPTER_DIR, default_chapter_dir, load_chapter_files
 
 COURSE_NAME = "Mathématiques 5e"
-COURSE_NAME_BY_LANGUAGE = by_language(fr=COURSE_NAME, en="Mathematics Year 5", nl="Wiskunde 5e jaar")
+COURSE_NAME_BY_LANGUAGE = by_language(fr=COURSE_NAME, en="Mathematics Year 5", nl="Wiskunde 5e jaar", de="Mathematik Klasse 10")
 
 
 def install_chapter(

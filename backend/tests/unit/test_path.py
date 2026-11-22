@@ -93,6 +93,9 @@ def test_the_skip_refusal_names_the_done_section() -> None:
     assert path.can_skip(CUR, Progress(done=frozenset({"sa"})), "sa", "nl") == (
         "Sectie “1. SA” is al afgerond: ze kan niet overgeslagen worden."
     )
+    assert path.can_skip(CUR, Progress(done=frozenset({"sa"})), "sa", "de") == (
+        "Abschnitt „1. SA“ ist schon abgeschlossen: Er kann nicht übersprungen werden."
+    )
 
 
 def test_complete_refusals() -> None:

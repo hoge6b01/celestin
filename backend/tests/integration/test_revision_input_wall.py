@@ -1,6 +1,6 @@
 """Spec 020 with specs 010 and 011: a révision's model input takes the course language only. The same scripted
-révision turn, for a French, an English and a Dutch account on the same course, hands the provider identical input;
-a French, an English and a Dutch course hand it different input."""
+révision turn, for a French, an English, a Dutch and a German account on the same course, hands the provider identical
+input; a French, an English, a Dutch and a German course hand it different input."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from tests.conftest import tool_call as call
 from tests.fixtures.fake_llm import FakeLLM
 from tests.integration.test_revision_endpoint import add_chapter
 
-FIRST_SECTION = {"fr": "suites", "en": "sequences", "nl": "rijen"}
+FIRST_SECTION = {"fr": "suites", "en": "sequences", "nl": "rijen", "de": "folgen"}
 
 
 @pytest.fixture(autouse=True)
@@ -55,11 +55,11 @@ def _dumped(calls: list) -> str:
     return json.dumps(calls, ensure_ascii=False, sort_keys=True)
 
 
-@pytest.mark.parametrize("language", ["fr", "en", "nl"])
+@pytest.mark.parametrize("language", ["fr", "en", "nl", "de"])
 async def test_the_provider_gets_the_same_revision_input_whatever_the_interface_language(make_client, language) -> None:
-    french, english, dutch = [await _run(make_client, locale, language) for locale in ("fr", "en", "nl")]
+    french, english, dutch, german = [await _run(make_client, locale, language) for locale in ("fr", "en", "nl", "de")]
     assert len(french) == 3
-    assert _dumped(french) == _dumped(english) == _dumped(dutch)
+    assert _dumped(french) == _dumped(english) == _dumped(dutch) == _dumped(german)
 
 
 async def test_a_french_an_english_and_a_dutch_course_hand_the_provider_different_revision_input(make_client) -> None:
@@ -79,3 +79,20 @@ async def test_a_french_an_english_and_a_dutch_course_hand_the_provider_differen
         for language, calls in runs.items()
     }
     assert "Bilan noté" in outputs["fr"] and "Self-assessment noted" in outputs["en"] and "Zelfbeoordeling" in outputs["nl"]
+
+
+async def test_a_german_course_hands_the_provider_its_own_revision_input(make_client) -> None:
+    """Spec 021: the fourth course language, beside the three above; its prefix is the pinned German révision text."""
+    import hashlib
+    from pathlib import Path
+
+    runs = {language: await _run(make_client, "fr", language) for language in ("fr", "en", "nl", "de")}
+    assert len({_dumped(calls) for calls in runs.values()}) == 4
+    german = runs["de"]
+    developer = german[0]["input"][0]["content"][0]["text"]
+    assert "## Die Wiederholung" in developer and "# Kapitel 2 — " in developer
+    pin = Path(__file__).parents[1] / "fixtures" / "render" / "system_text_sha_de_revision.txt"
+    assert hashlib.sha256(developer.encode("utf-8")).hexdigest() == pin.read_text().strip()
+    assert german[-1]["input"][-1]["content"][0]["text"].startswith("Es ist Sonntag, 15. November")
+    output = [i["output"] for i in german[1]["input"] if i.get("type") == "function_call_output"][-1]
+    assert "Selbsteinschätzung notiert" in output and "wackelt" in output

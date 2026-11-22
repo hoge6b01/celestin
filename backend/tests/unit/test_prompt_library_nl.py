@@ -58,8 +58,8 @@ def test_templates_are_parsed_for_dutch_and_know_it() -> None:
 
 def test_dutch_is_one_of_the_other_languages_templates() -> None:
     library = PromptLibrary(PROMPTS)
-    assert [t.language for t in library.other_templates("sciences", "fr")] == ["en", "nl"]
-    assert [t.language for t in library.other_templates("sciences", "nl")] == ["fr", "en"]
+    assert "nl" in [t.language for t in library.other_templates("sciences", "fr")]
+    assert [t.language for t in library.other_templates("sciences", "nl")] == ["fr", "en", "de"]
 
 
 def test_a_missing_dutch_file_is_nothing_for_a_subject_that_does_not_offer_dutch(root: Path, french_only: None) -> None:

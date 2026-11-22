@@ -130,6 +130,7 @@ MESSAGES: dict[str, str] = {
     "language.fr": "French",
     "language.en": "English",
     "language.nl": "Dutch",
+    "language.de": "German",
     "issue.pack.title_missing": "the document must start with a title, “# Chapter title”",
     "issue.pack.title_too_long": "the title is over {max} characters",
     "issue.pack.title_multiple": "the document can only have one level-1 title",

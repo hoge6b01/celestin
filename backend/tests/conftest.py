@@ -42,6 +42,8 @@ def french_only(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setitem(subject.SUBJECTS, key, replace(subject.SUBJECTS[key], languages=("fr",)))
 
 
+
+
 @pytest.fixture
 def settings() -> Settings:
     return Settings(
@@ -107,11 +109,12 @@ def sign_in(
 
 ENGLISH_LESSON_DIR = FIXTURES / "chapters" / "sequences_en"
 DUTCH_LESSON_DIR = FIXTURES / "chapters" / "rijen_nl"
+GERMAN_LESSON_DIR = FIXTURES / "chapters" / "folgen_de"
 
 
 def seed_lesson(app, user_id: str, language: str = "fr") -> tuple[str, str]:
     """Chapter 1 as a ready chapter of « Mathématiques 5e » (or, for `en`, the English
-    sequences fixture in « Mathematics Year 5 »). The fixed ids go to the first owner;
+    sequences fixture in « Mathematics Year 5 »; for `nl` and `de`, the Dutch and German ones). The fixed ids go to the first owner;
     anyone else gets generated ones."""
     from scripts.seed import COURSE_NAME, install_chapter
 
@@ -120,6 +123,7 @@ def seed_lesson(app, user_id: str, language: str = "fr") -> tuple[str, str]:
     extra: dict = {
         "en": {"directory": ENGLISH_LESSON_DIR, "course_name": "Mathematics Year 5", "language": "en"},
         "nl": {"directory": DUTCH_LESSON_DIR, "course_name": "Wiskunde 5e jaar", "language": "nl"},
+        "de": {"directory": GERMAN_LESSON_DIR, "course_name": "Mathematik Klasse 10", "language": "de"},
     }.get(language, {"course_name": COURSE_NAME})
     return install_chapter(
         repos,

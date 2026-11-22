@@ -6,6 +6,7 @@ from __future__ import annotations
 import pytest
 
 from app.config import get_settings
+from app.domain.language import COURSE_LANGUAGES
 from app.providers.base import Completed, TextDelta
 from app.services.prompts import PromptLibrary
 from app.services.tutor_service import TutorService
@@ -17,7 +18,7 @@ from tests.fixtures.fake_llm import FakeLLM
 PROMPTS = PromptLibrary(get_settings().prompts_dir)
 
 
-@pytest.mark.parametrize("language", ["fr", "en", "nl"])
+@pytest.mark.parametrize("language", COURSE_LANGUAGES)
 def test_the_dry_run_names_the_revisions_chapters_and_every_probe(language: str) -> None:
     scope = load_revision("mathematics", PROMPTS, language)  # type: ignore[arg-type]
     probes = probe.REVISION_PROBES[language]

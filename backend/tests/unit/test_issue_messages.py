@@ -229,3 +229,17 @@ def test_a_dutch_reader_gets_dutch_words_and_reasons() -> None:
     assert render_issue(wrong, "nl")["message"] == (
         "het document volgt het model in het Frans, maar deze cursus is in het Engels"
     )
+
+
+def test_a_german_reader_gets_german_words_and_reasons() -> None:
+    """Spec 021 R1.7: `where` and the reason in German; an uncoded issue keeps its French message."""
+    assert render_where("titre", "de") == "Titel" and render_where("exercice 6.1.2", "de") == "Aufgabe 6.1.2"
+    assert render_where("section n°3", "de") == "Abschnitt Nr. 3" and render_where("§ 4.2", "de") == "§ 4.2"
+    coded = ContentIssue("§ 4.2", "titre manquant", "pack.title_missing", {})
+    assert render_issue(coded, "de")["message"] != coded.message
+    plain = ContentIssue("§ 4.2", "titre manquant")
+    assert render_issue(plain, "de") == {"where": "§ 4.2", "message": "titre manquant"}
+    wrong = ContentIssue("document", "x", "pack.wrong_language", {"found_language": "fr", "expected_language": "en"})
+    assert render_issue(wrong, "de")["message"] == (
+        "das Dokument folgt der Vorlage auf Französisch, aber dieser Kurs ist auf Englisch"
+    )
