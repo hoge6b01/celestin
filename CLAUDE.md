@@ -73,10 +73,18 @@ The `./specs` folder contains steering documents for the project:
 - `./specs/index.md` - Index of all feature specs
 
 ### Spec-Driven Development
-Feature specs are written and executed with the `sdd` plugin (marketplace `eschnou/claude-plugins`,
-install with `/plugin marketplace add eschnou/claude-plugins` then `/plugin install sdd@eschnou-claude-plugins`).
-**Always go through these commands**; never freehand a `requirements.md`, `design.md` or `tasks.md`,
-and never run a later step before the user has reviewed the previous one.
+The stages, review gates and file conventions are in `specs/WORKFLOW.md`, shared with other
+assistants (`AGENTS.md` points them there). **In Claude Code, carry out each stage with its `sdd`
+plugin command** (marketplace `eschnou-plugins` from the repository `eschnou/claude-plugins`,
+install with `/plugin marketplace add eschnou/claude-plugins` then `/plugin install sdd@eschnou-plugins`);
+never freehand a `requirements.md`, `design.md` or `tasks.md`, and never run a later step before
+the user has reviewed the previous one. Exceptions only when the user says so for the task. If the
+plugin is not installed, say so and follow `specs/WORKFLOW.md` by hand.
+
+Specs may have been written, reviewed or revised by another assistant. Before a stage, read the
+spec's files and any review notes beside them (e.g. `specs/NNN-review.md`) and carry their agreed
+decisions forward; a proposal there is not a decision. Revising a spec after a review is not a
+plugin step: edit the files directly, following `specs/WORKFLOW.md`.
 
 | Step | Command | Produces |
 | --- | --- | --- |
@@ -87,7 +95,7 @@ and never run a later step before the user has reviewed the previous one.
 | 5 | `/sdd:verify [slug] [focus]` | a review report against the spec; changes nothing |
 
 `/sdd:init` bootstraps `specs/` and is already done here. Specs are numbered sequentially
-(`001-`, `002-`, …) and listed in `specs/index.md`, which every step updates.
+(`001-`, `002-`, …) and listed in `specs/index.md`; keep the index current with their status.
 
 ### Documentation
 When a user request is completed, create or update documentation in `./documentation` to reflect the changes:
