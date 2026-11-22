@@ -108,9 +108,9 @@ New, from the textbook check:
   `#### 6.1.2 (S. 128, Nr. 11)`; appendix solutions are joined to their exercise by page, number
   and sub-letter; answer pools are never keys and never copied into a statement; the `mapping` kind
   covers « Ordne zu »; a sub-answer with several quantities gets named key parts.
-- **D17. Confirmed submission.** A card's answer field or option submits directly. Chat and voice
-  present the learner's original message or transcript and the selected exercise for confirmation
-  or correction. The server checks the confirmed value immediately; the model cannot submit or
+- **D17. Confirmed submission.** A card's answer field or option submits directly. Chat presents
+  the learner's original message and the selected exercise for confirmation or correction (voice:
+  a later spec, requirements §12.1). The server checks the confirmed value immediately; the model cannot submit or
   replace it (§3.10–3.11).
 - **D18. Proven domains and roots.** Retain original domain guards; use exact rational polynomial
   arithmetic and certified real-root counting and isolation. When completeness, domain equality
@@ -124,7 +124,7 @@ New, from the textbook check:
  material → pack and keys → server-bound exercise → card with answer field
                                      ▲                      │
                               shown in conversation         │ submit answer / choice
-                                                            │ chat or voice: confirm first
+                                                            │ chat: confirm first
                                                             ▼
                                     server resolves presentation and checks immediately
                                                             │
@@ -404,7 +404,9 @@ arbitrary exercise data. The ID alone is not authorization.
   A failed or cancelled turn creates no orphan eligible presentation. The existing stopped-parcours
   `seance/report` path may retain a partial turn, but only server-validated, stored cards become
   eligible; it cannot accept a forged binding from a client report.
-- **Voice in parcours:** The trusted `/api/voice/tool` `display_board` path validates and persists
+- **Voice in parcours (moved to a later spec, requirements §12.1; kept as input for it):** In this
+  spec a card from `/api/voice/tool` is shown unbound, and a reported voice turn never creates a
+  checkable presentation. The later spec's starting point: the trusted `/api/voice/tool` `display_board` path validates and persists
   the presentation and the authoritative card before returning a checkable card and ID. Associate
   it with the authenticated server-owned voice session and the applicable chapter, section,
   version and transcript ordering. The later `/api/seance/report` reconciles the same server-issued
@@ -426,19 +428,18 @@ provide automatic revision rollover, and this spec does not assume that it does.
 ### 3.10 Confirming and submitting an answer
 
 A dedicated card field submits the entire answer, and a choice selection submits its option ID.
-For chat or voice, the tutor may call `propose_answer(exercise_id, message_id)` to open a
+For chat (stage 023c), the tutor may call `propose_answer(exercise_id, message_id)` to open a
 confirmation, but cannot submit the answer. The candidate text is the server-recorded learner
-message, or the original recognized voice transcript shown to the learner, not a model-authored
-answer or a model-selected substring. The learner selects the exercise and confirms or edits the
-text before submission. The UI makes both value and exercise visible. If the original message,
-transcript, exercise or intent is ambiguous, ask for clarification; do not prefill a solution from
-model prose or the key. A speech recognition failure offers text entry; keyboard and screen-reader
-paths must work. Voice transcript delivery from the browser does not itself imply confirmation.
+message, not a model-authored answer or a model-selected substring. The learner selects the
+exercise and confirms or edits the text before submission. The UI makes both value and exercise
+visible. If the original message, exercise or intent is ambiguous, ask for clarification; do not
+prefill a solution from model prose or the key. Keyboard and screen-reader paths must work. Voice
+is out of this spec (requirements §12.1).
 
 `POST /api/answers/submissions` (route name to be finalized against the existing APIs) takes
 `{exercise_id, answer, source, request_id}`. An authenticated learner's explicit field submit,
-choice, or confirmation constitutes the submission. `source` is `card`, `choice`, `chat`, or
-`voice`; it is informational and does not replace authorization. The server resolves the
+choice, or confirmation constitutes the submission. `source` is `card`, `choice` or `chat`
+(`voice` is reserved for the later voice spec); it is informational and does not replace authorization. The server resolves the
 presentation and its eligibility, reads the key server-side, checks the confirmed answer locally,
 and commits the submission, result and transcript entry in one transaction. For révision this
 transaction also records a recordable per-exercise result and its source. The response contains
@@ -465,10 +466,8 @@ replay; `needs_review` never exposes the key. Define exact retention and UI stat
 confirmation route is the only entry point that creates a final learner submission and invokes the
 checker; the model cannot directly submit, select a stored answer for checking or choose a verdict.
 There is no `check_answer` model tool and no model-turn streaming buffer for checker results.
-`propose_answer` only offers the confirmation UI with a valid exercise and source message. For
-chat the server supplies the original stored learner text; for voice the UI offers the original
-recognition transcript and requires the learner's confirmation or correction. Neither path uses
-model-generated answer text. The declaration is appended to the existing tool set where needed
+`propose_answer` only offers the confirmation UI with a valid exercise and source message: the
+server supplies the original stored learner text, never model-generated answer text. The declaration is appended to the existing tool set where needed
 and is not offered in discussion. A candidate must not reveal a key.
 
 In révision, the submission service stores the submission, its canonical transcript entry and
@@ -513,7 +512,7 @@ that run and scope. Schema, migration and exact reset/deletion lifecycle are rev
 - `tutor.<lang>.md` (all four): set checkable cards using validated binding; use only committed
   server-supplied verdict and basis, and never call something correct or incorrect based on the
   model's own judgment. Guide without a verdict when checking is unavailable.
-- `propose_answer` may offer the confirmation of the original learner message or voice transcript;
+- `propose_answer` may offer the confirmation of the original learner message;
   it cannot grade, send an answer, or select the key. Learner confirmation calls the normal route.
 - `modes/revision.<lang>.md`: the tutor still displays the course's wording after the question is
   settled and asks for the student's own self-assessment (spec 020 D3).
@@ -565,11 +564,10 @@ that run and scope. Schema, migration and exact reset/deletion lifecycle are rev
 - Révision « Bilan » (`revision-bilan.tsx`): per section, the self-assessment chip as today and a
   list of checked exercises (ref or task, verdict mark, source, date), with explicitly labelled
   review exercises distinguishable. Learners can correct the exercise label in the pack (D19).
-- For a candidate answer from chat or voice, show the proposed exercise and answer for the learner
-  to confirm or correct before submission. Preserve keyboard, screen-reader and text-entry paths.
+- For a candidate answer from chat, show the proposed exercise and answer for the learner to
+  confirm or correct before submission. Preserve keyboard and screen-reader paths.
 - Pack view: per exercise a « prüfbar » or « Lösung prüfen » badge, from `keys`.
-- Voice bridge presents the recognized answer for learner confirmation or correction and uses
-  the same server-owned submission contract; it does not assert a binding with a browser payload.
+- Voice bridge: unchanged in this spec; cards it shows are unbound (requirements §12.1).
 
 ## 4. Data models
 
@@ -581,7 +579,7 @@ that run and scope. Schema, migration and exact reset/deletion lifecycle are rev
 | `exercise_results` | Per-exercise revision result, unique by submission ID, written with submission and transcript; existing `revision_results` unchanged. Migration/schema names remain to be finalized. |
 | `ExerciseCard`, `CheckQuestionCard` | Optional binding input, server presentation ID/status and generated task; no model-chosen `correct_option_id` or automatic feedback. |
 | `PackIndex`, chapter scope | Parsed keys and explicit editable review label; current content version controls staleness. |
-| APIs and client events | Presentation, confirmed-submission response, transcript replay and revision result DTO; wire names and voice report reconciliation are review items. |
+| APIs and client events | Presentation, confirmed-submission response, transcript replay and revision result DTO; wire names are review items (voice report reconciliation: later voice spec). |
 
 The presentation is scoped by its owner, course, chapter, section, version and mode, and by an
 explicit logical revision run where relevant; the originating transcript row is evidence of the
@@ -620,14 +618,14 @@ limits and migration in design review, without relying on browser-supplied autho
   another owner/course/mode, changed/reset content, or an unrelated revision run cannot be graded.
   A stored card continues working across parcours `capped` rollover and a later return to the same
   section; a replaced/closed revision or a content change invalidates it.
-- Submission: card, choice, chat and voice; no model-authored answer or key appears in the
+- Submission: card, choice and chat; no model-authored answer or key appears in the
   confirmation candidate. The learner can correct a proposed `2` when their answer was `12`.
   Identical retries and concurrent requests produce one submission and one result; request-ID reuse
   with different payload conflicts; lost responses, reload and failure before/after commit are
   covered. A failed later model turn leaves an already committed learner result intact.
-- Transcript and voice integration: presentation and card are stored atomically before enabling a
-  text card; voice tool presentation and later client report reconcile without duplicates or lost
-  ordering, including interruption and retry. This includes section splits, caps and reset races.
+- Transcript integration: presentation and card are stored atomically before enabling a text
+  card, including interruption and retry, section splits, caps and reset races. A card from a voice
+  session or a reported voice turn is never checkable.
 - Revision: submission, canonical entry and per-exercise result commit atomically; failed submission
   rolls all three back. `record_result` keeps spec 020 turn semantics, and self-assessment and
   checker results remain separate. Label, source and date survive replay without marking a section
@@ -672,11 +670,13 @@ resulting direction. The revised specification remains in design review, not imp
 
 1. Finalize exact presentation/submission/transcript schema, route contracts, concurrency, quota and
    migration; prove commit/retry/reload behavior against the current séance and revision stores.
-2. Specify voice session association and authoritative `/api/voice/tool` and `seance/report`
-   reconciliation, including partial turns, section transitions, ordering, reset and duplication.
-   Preserve voice confirmation in scope; revision voice remains excluded.
+2. Voice is out of this spec (requirements §12.1): specify only that voice cards stay unbound and
+   that a reported voice turn cannot create a checkable presentation; the voice-session association
+   and report reconciliation belong to the later voice spec.
 3. Fix exact-parser interfaces, supported stated-domain grammar, certified root and π bounds, and
    concrete resource limits. Review examples and prove boundary handling before coding.
 4. Specify review-label syntax, editor validation and revision DTO. Defer the practice-test
-   integration and aggregation contract to spec 022. Phasing may isolate risks, but does not silently
-   drop the already agreed chat, voice, revision and review-label requirements.
+   integration and aggregation contract to spec 022.
+5. The plan follows the three stages of requirements §12.2 (023a checker and card submission in the
+   parcours, 023b révision record and review labels, 023c chat confirmation); each stage ends in a
+   shippable, tested state.

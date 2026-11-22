@@ -169,9 +169,9 @@ verdict is about that exercise and nothing else.
    is optional for the verdict and cannot change it.
 3. **The answer is the student's**: a checkable card offers a final-answer field tied to the
    exercise; choice selects its option on that card. Answers in chat are supported: the proposed
-   answer and exercise are shown for the learner to confirm or correct before checking. For voice,
-   show the recognized answer for confirmation or correction. The checker uses the learner's
-   confirmed submission, not a model-selected substring (§9, §10).
+   answer and exercise are shown for the learner to confirm or correct before checking. Spoken
+   answers are not checked in this spec (§12.1). The checker uses the learner's confirmed
+   submission, not a model-selected substring (§9, §10).
 4. Unknown, stale, unauthorized or uncheckable presentations, a key needing review, and answers
    the code cannot settle give no correct/incorrect verdict. A retry of the same submission must not
    produce a duplicate result; a new learner attempt remains a distinct submission.
@@ -184,8 +184,9 @@ verdict is about that exercise and nothing else.
    within the same owner, chapter, section and content version, provided it was actually stored and
    remains eligible. Chapter edits, resets, deletion and a replaced révision invalidate it according
    to the design; authorization and mode are checked every time.
-8. Available in voice where that mode supports voice, with the same confirmation and server-owned
-   presentation guarantees. Adding voice to révision, which currently has none, is outside this spec.
+8. Not in voice (§12.1): a card shown during a voice session is not checkable, and a spoken answer
+   is not submitted. A card presented in a stored text turn keeps its answer field, also while a
+   voice session runs; its verdict shows on the card. Checking spoken answers is a later spec.
 
 ### R4. The tutor's rule changes with the checker
 
@@ -274,6 +275,8 @@ whole section.
 - Checking required forms of `expression` answers (« factorised », « Scheitelpunktform »): §6.2;
   the value is checked and the form is said to be unchecked (§8.3).
 - Exercises that depend on a figure or a measurement on the page (§8.5).
+- Checking in voice: cards presented by a voice session, spoken answers, their confirmation, and
+  the server-side recording and report reconciliation it needs (§12.1); a later spec.
 - Graded class test analysis and correction review (follow-ups named in spec 022).
 
 ## 6. Decisions on the open questions (owner, 22 November 2026)
@@ -378,7 +381,7 @@ The user agreed to the directions documented in `specs/023-design-proposal.md`:
 1. Use a dedicated answer field on the checkable card; bind choice selections to that card. Also
    allow answers in chat, showing the proposed answer and exercise for confirmation or correction
    before checking. For voice, show the recognized answer for confirmation or correction. The
-   detailed voice and accessibility interaction remains to be designed.
+   detailed voice and accessibility interaction remains to be designed. (Voice superseded by §12.1.)
 2. Begin expression checking with cases where the relevant domain and equivalence can both be
    determined exactly. Unsupported or uncertain cases have no verdict; the class can grow later.
 3. Require a complete, reliable set of solutions and unambiguous rounding before a verdict,
@@ -404,12 +407,26 @@ At the user's request the design incorporates `specs/023-review-claude.md` with 
    and section return do not invalidate eligible presentations; resets, content changes, closed
    revision runs and cross-user/cross-mode use do. Voice presentations are persisted by the trusted
    server before submission and reconciled with the reported transcript. Voice checking remains in
-   scope; revision voice remains out of scope.
+   scope; revision voice remains out of scope. (Voice superseded by §12.1.)
 3. A supported explicitly stated answer domain can be checked against the required domain; an
    unsupported or ambiguous domain gives no verdict. Certified algebraic root rounding must
    establish the relevant root and rounding boundary exactly; resource exhaustion is inconclusive.
    Exact supported surds and bounded rational linear forms in π cover common geometry cases;
    rounding π requires certified rational bounds, and unsupported forms give no verdict.
 4. Work may be phased, but chat, voice confirmation, revision results and review labels remain in
-   scope. `specs/023-review-claude.md` retains the original review; the updated design still needs
+   scope (voice superseded by §12.1; phases fixed by §12.2). `specs/023-review-claude.md` retains the original review; the updated design still needs
    review before a task plan or implementation.
+
+## 12. Scope decisions (owner, 22 November 2026, after `specs/023-review-reconciliation.md`)
+
+1. **Voice checking moves to a later spec.** This spec checks only answers given through a card's
+   field, a choice card, or a confirmed chat candidate, on cards presented in stored text turns.
+   Cards created in a voice session are shown unbound; spoken answers are not confirmed or
+   submitted. The later spec takes over the server-side recording of voice presentations at
+   `/api/voice/tool` and their reconciliation with `/api/seance/report`. Révision has no voice.
+2. **Three planning stages**, each shippable on its own, in this order:
+   - **023a**: keys and authoring, the exact checker, stored presentations, the card answer field
+     and bound choice cards, direct checking on submission, verdict display and replay, in the
+     parcours (and révision display, without its record);
+   - **023b**: the révision record per exercise (`exercise_results`) and the review labels;
+   - **023c**: chat candidates with `propose_answer` and the learner's confirmation.
